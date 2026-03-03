@@ -75,7 +75,7 @@ $total_slots = $stmt_slots->fetch()['total'] ?? 0;
 <div class="top-nav justify-content-between">
     <div class="d-flex align-items-center">
         <i class="fas fa-layer-group me-3 fs-4"></i>
-        <h5 class="mb-0 fw-bold">Admin Panel XXX2X3X <span class="fw-light opacity-75 ms-2">Management System</span></h5>
+        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">Management System</span></h5>
     </div>
     
     <div class="d-flex align-items-center">
