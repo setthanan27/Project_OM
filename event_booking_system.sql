@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 03, 2026 at 12:13 PM
+-- Generation Time: Mar 08, 2026 at 07:55 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -138,6 +138,7 @@ CREATE TABLE `event_bookings` (
   `owner_id` int(11) DEFAULT NULL,
   `customer_name` varchar(255) NOT NULL,
   `customer_phone` varchar(20) NOT NULL,
+  `payment_slip` varchar(255) DEFAULT NULL,
   `booking_status` enum('pending','confirmed','cancelled') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -146,8 +147,14 @@ CREATE TABLE `event_bookings` (
 -- Dumping data for table `event_bookings`
 --
 
-INSERT INTO `event_bookings` (`id`, `event_id`, `type_id`, `owner_id`, `customer_name`, `customer_phone`, `booking_status`, `created_at`) VALUES
-(1, 1, 1, NULL, 'Apple', '00000000000', 'pending', '2026-03-03 10:50:53');
+INSERT INTO `event_bookings` (`id`, `event_id`, `type_id`, `owner_id`, `customer_name`, `customer_phone`, `payment_slip`, `booking_status`, `created_at`) VALUES
+(1, 1, 1, NULL, 'Apple', '00000000000', NULL, 'cancelled', '2026-03-03 10:50:53'),
+(2, 1, 1, NULL, 'Dee', '082111222', NULL, 'cancelled', '2026-03-06 09:44:19'),
+(3, 1, 1, 1, 'Apple', '000-000-0000', 'slip_1772791777_1.jpg', 'cancelled', '2026-03-06 10:09:37'),
+(4, 1, 1, 1, 'Apple', '000-000-0000', 'slip_1772791792_1.jpg', 'cancelled', '2026-03-06 10:09:52'),
+(5, 1, 1, 1, 'Apple', '000-000-0000', 'slip_1772791802_1.png', 'cancelled', '2026-03-06 10:10:02'),
+(6, 1, 1, 1, 'Apple', '0000000000', 'slip_1772793720_1.png', 'pending', '2026-03-06 10:42:00'),
+(7, 1, 1, 1, 'Apple', '<br />\r\n<b>Warning</', 'slip_1772793741_1.png', 'pending', '2026-03-06 10:42:21');
 
 --
 -- Indexes for dumped tables
@@ -234,7 +241,7 @@ ALTER TABLE `events`
 -- AUTO_INCREMENT for table `event_bookings`
 --
 ALTER TABLE `event_bookings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables
