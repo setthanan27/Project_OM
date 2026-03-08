@@ -30,7 +30,7 @@ $total_slots = $stmt_slots->fetch()['total'] ?? 0;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | SU Web Portal</title>
+    <title>Admin Dashboard | EventQ+</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -98,9 +98,9 @@ $total_slots = $stmt_slots->fetch()['total'] ?? 0;
     <ul class="sidebar-menu">
         <li class="active"><i class="fas fa-chart-line"></i> Dashboard</li>
         <li onclick="location.href='admin_create_event.php'"><i class="fas fa-calendar-plus"></i> สร้างงานอีเวนท์</li>
-        <li><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
+        <li onclick="location.href='admin_bookings.php'"><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
         <li onclick="location.href='admin_users.php'"><i class="fas fa-users-cog"></i> จัดการสมาชิก</li>
-        <li><i class="fas fa-chart-pie"></i> รายงานสถิติ</li>
+        <li onclick="location.href='admin_stats.php'"><i class="fas fa-chart-pie"></i> รายงานสถิติ</li>
         <hr class="mx-3 my-2">
         <li><i class="fas fa-cog"></i> ตั้งค่าระบบ</li>
     </ul>

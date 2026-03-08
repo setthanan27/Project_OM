@@ -11,7 +11,7 @@ include 'config.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สร้างงานใหม่ | SU Web Portal</title>
+    <title>สร้างงานใหม่ | EventQ+</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -38,11 +38,21 @@ include 'config.php';
 <div class="top-nav justify-content-between">
     <div class="d-flex align-items-center">
         <i class="fas fa-layer-group me-3 fs-4"></i>
-        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">Admin</span></h5>
+        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">Create an event</span></h5>
     </div>
-    <div class="d-flex align-items-center">
-        <span class="fw-bold me-3"><?php echo $_SESSION['admin_name']; ?></span>
-        <a href="logout.php" class="text-white"><i class="fas fa-sign-out-alt"></i></a>
+   <div class="d-flex align-items-center">
+        <div class="text-end me-3 d-none d-md-block">
+            <small class="d-block opacity-75">ผู้ดูแลระบบ</small>
+            <span class="fw-bold"><?php echo $_SESSION['admin_name']; ?></span>
+        </div>
+        
+        <div class="rounded-circle bg-white text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <?php echo mb_substr($_SESSION['admin_name'], 0, 1, 'UTF-8'); ?>
+        </div>
+
+        <a href="logout.php" class="btn btn-link text-white ms-3 p-0" title="ออกจากระบบ" onclick="return confirm('คุณต้องการออกจากระบบใช่หรือไม่?')">
+            <i class="fas fa-sign-out-alt fs-5"></i>
+        </a>
     </div>
 </div>
 
@@ -50,7 +60,10 @@ include 'config.php';
     <ul class="sidebar-menu">
         <li onclick="location.href='admin_panel.php'"><i class="fas fa-chart-line"></i> Dashboard</li>
         <li class="active"><i class="fas fa-calendar-plus"></i> สร้างงานอีเวนท์</li>
-        <li><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
+        <li onclick="location.href='admin_bookings.php'"><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
+        <li onclick="location.href='admin_users.php'"><i class="fas fa-users-cog"></i> จัดการสมาชิก</li>
+        <li onclick="location.href='admin_stats.php'"><i class="fas fa-chart-pie"></i> รายงานสถิติ</li>
+    
     </ul>
 </div>
 

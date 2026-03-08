@@ -29,7 +29,7 @@ $booth = $stmt->fetch();
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>แก้ไขประเภทบูธ | Admin Panel</title>
+    <title>แก้ไขประเภทบูธ | EventQ+</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --su-green: #3a8173; }

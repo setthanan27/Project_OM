@@ -14,7 +14,7 @@ if (isset($_SESSION['owner_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจองบูธแสดงสินค้า | SU Web Portal</title>
+    <title>ระบบจองบูธแสดงสินค้า | EventQ+</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -50,7 +50,7 @@ if (isset($_SESSION['owner_id'])) {
                 <i class="fas fa-store-alt fa-5x"></i>
             </div>
             <h1 class="fw-bold display-5">ระบบจองบูธสำหรับร้านค้า</h1>
-            <p class="lead opacity-75">SU Web Portal - ศูนย์รวมงานอีเวนท์และพื้นที่จัดแสดงสินค้า</p>
+            <p class="lead opacity-75">EventQ+ - ศูนย์รวมงานอีเวนท์และพื้นที่จัดแสดงสินค้า</p>
         </div>
     </div>
 
@@ -80,7 +80,7 @@ if (isset($_SESSION['owner_id'])) {
             </div>
         </div>
         <div class="text-center mt-5 text-muted small">
-            <p>© 2026 SU Web Portal Event Management System. All rights reserved.</p>
+            <p>© 2026 EventQ+ Management System. All rights reserved.</p>
         </div>
     </div>
 
