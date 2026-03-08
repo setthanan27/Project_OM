@@ -1,14 +1,14 @@
 <?php
 session_start();
-// ตรวจสอบสิทธิ์ Admin
+// ตรวจสอบสิทธิ์ Admin เพื่อป้องกันคนนอกแอบเข้าหน้าจัดการ
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
 }
 include 'config.php';
 
-// ดึงรายชื่อเจ้าของบูธทั้งหมด
-$stmt = $conn->query("SELECT * FROM booth_owners ORDER BY status ASC, created_at DESC");
+// ดึงรายชื่อเจ้าของบูธทั้งหมด เรียงตามสถานะ (pending มาก่อน) และวันที่สมัครล่าสุด
+$stmt = $conn->query("SELECT * FROM booth_owners ORDER BY FIELD(status, 'pending', 'approved', 'rejected'), created_at DESC");
 $users = $stmt->fetchAll();
 ?>
 
@@ -24,7 +24,6 @@ $users = $stmt->fetchAll();
         :root { --su-green: #3a8173; --su-dark: #2d6358; --sidebar-width: 260px; }
         body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; }
         
-        /* สไตล์หลักให้เหมือน Admin Panel */
         .top-nav { background: var(--su-green); color: white; height: 65px; display: flex; align-items: center; padding: 0 25px; position: fixed; width: 100%; z-index: 1050; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .sidebar { width: var(--sidebar-width); background: white; height: 100vh; position: fixed; top: 65px; border-right: 1px solid #e0e0e0; padding-top: 15px; z-index: 1000; }
         .sidebar-menu { list-style: none; padding: 0; margin: 0; }
@@ -34,14 +33,11 @@ $users = $stmt->fetchAll();
         .sidebar-menu li.active { background: #edf5f3; border-left-color: var(--su-green); color: var(--su-green); }
 
         .main-content { margin-left: var(--sidebar-width); padding: 95px 40px 40px; }
-        
-        /* Table & Card Styling */
         .user-card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); overflow: hidden; background: white; }
         .table thead { background: #f8fbf9; border-bottom: 2px solid #edf2f0; }
         .table thead th { font-weight: 600; color: #555; padding: 15px 20px; }
         .table tbody td { padding: 15px 20px; vertical-align: middle; }
         
-        /* Status Badges */
         .badge-pending { background: #fff8e1; color: #ff8f00; border: 1px solid #ffe082; padding: 6px 12px; border-radius: 20px; font-weight: 500; }
         .badge-approved { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; padding: 6px 12px; border-radius: 20px; font-weight: 500; }
         .badge-rejected { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 6px 12px; border-radius: 20px; font-weight: 500; }
@@ -52,12 +48,12 @@ $users = $stmt->fetchAll();
 <div class="top-nav justify-content-between">
     <div class="d-flex align-items-center">
         <i class="fas fa-layer-group me-3 fs-4"></i>
-        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">Admin Panel</span></h5>
+        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">SU Web Portal</span></h5>
     </div>
     <div class="d-flex align-items-center">
         <div class="text-end me-3">
             <small class="d-block opacity-75">ผู้ดูแลระบบ</small>
-            <span class="fw-bold"><?php echo $_SESSION['admin_name']; ?></span>
+            <span class="fw-bold"><?php echo htmlspecialchars($_SESSION['admin_name']); ?></span>
         </div>
         <a href="logout.php" class="text-white ms-2"><i class="fas fa-sign-out-alt fs-5"></i></a>
     </div>
@@ -67,8 +63,8 @@ $users = $stmt->fetchAll();
     <ul class="sidebar-menu">
         <li onclick="location.href='admin_panel.php'"><i class="fas fa-chart-line"></i> Dashboard</li>
         <li onclick="location.href='admin_create_event.php'"><i class="fas fa-calendar-plus"></i> สร้างงานอีเวนท์</li>
-        <li class="active"><i class="fas fa-users-cog"></i> อนุมัติสมาชิก</li>
-        <li><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
+        <li class="active" onclick="location.href='admin_users.php'"><i class="fas fa-users-cog"></i> อนุมัติสมาชิก</li>
+        <li onclick="location.href='admin_bookings.php'"><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
     </ul>
 </div>
 
@@ -120,7 +116,8 @@ $users = $stmt->fetchAll();
                                        class="btn btn-outline-danger btn-sm px-3" 
                                        onclick="return confirm('ยืนยันการปฏิเสธสมาชิกนี้?')">ปฏิเสธ</a>
                                 <?php else: ?>
-                                    <span class="text-muted small">ดำเนินการแล้ว</span>
+                                    <a href="update_user.php?id=<?php echo $u['id']; ?>&action=pending" 
+                                       class="btn btn-link btn-sm text-decoration-none text-muted">แก้ไขสถานะ</a>
                                 <?php endif; ?>
                             </td>
                         </tr>
