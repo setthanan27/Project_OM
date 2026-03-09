@@ -23,7 +23,7 @@ $event = $stmt->fetch();
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>แก้ไขข้อมูลงาน | Admin Panel</title>
+    <title>แก้ไขข้อมูลงาน | EventQ+</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --su-green: #3a8173; }

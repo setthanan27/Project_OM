@@ -23,7 +23,7 @@ if (!$booking) { die("ไม่พบข้อมูลการจอง"); }
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>ใบยืนยันการจอง - <?php echo $booking['id']; ?></title>
+    <title>ใบยืนยันการจอง - EventQ+ <?php echo $booking['id']; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #eee; font-family: 'Sarabun', sans-serif; }

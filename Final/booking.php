@@ -75,7 +75,7 @@ $booth_types = $stmt_booths->fetchAll();
                     <div class="row g-3 text-muted">
                         <div class="col-md-6">ชื่อร้านค้า: <b><?php echo $_SESSION['shop_name']; ?></b></div>
                         <div class="col-md-6">ผู้ติดต่อ: <b><?php echo $_SESSION['owner_name']; ?></b></div>
-                        <input type="hidden" name="customer_phone" value="<?php echo $_SESSION['phone']; ?>">
+                    
                     </div>
                 </div>
 
