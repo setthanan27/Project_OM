@@ -2,13 +2,32 @@
 session_start();
 include 'config.php';
 
-// กรณีที่ Login แล้ว: ดึงข้อมูลงานอีเวนท์ทั้งหมดมาแสดง
-$events = [];
-if (isset($_SESSION['owner_id'])) {
-    $stmt = $conn->query("SELECT * FROM events ORDER BY event_date ASC");
-    $events = $stmt->fetchAll();
+// ตรวจสอบการ Login
+if (!isset($_SESSION['owner_id'])) {
+    header("Location: user_login.php");
+    exit;
 }
+
+$owner_id = $_SESSION['owner_id'];
+// ตรวจสอบสถานะการกรองจาก URL (all = หน้าหลักเลือกงาน, confirmed = หน้าจัดการกิจกรรม)
+$filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+
+// 1. ดึงข้อมูลงานอีเวนท์ทั้งหมด (สำหรับหน้าหลัก)
+$stmt_events = $conn->query("SELECT * FROM events ORDER BY event_date ASC");
+$events = $stmt_events->fetchAll();
+
+// 2. ดึงข้อมูลการจองที่ "ยืนยันแล้ว" เพื่อใช้แสดงในเมนูและหน้าจัดการกิจกรรม
+$sql_confirmed = "SELECT b.*, e.event_name, t.type_name 
+                  FROM event_bookings b
+                  LEFT JOIN events e ON b.event_id = e.id
+                  LEFT JOIN booth_types t ON b.type_id = t.id
+                  WHERE b.owner_id = ? AND b.booking_status = 'confirmed'
+                  ORDER BY b.id DESC";
+$stmt_conf = $conn->prepare($sql_confirmed);
+$stmt_conf->execute([$owner_id]);
+$confirmed_bookings = $stmt_conf->fetchAll();
 ?>
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -21,103 +40,118 @@ if (isset($_SESSION['owner_id'])) {
     <style>
         :root { --su-green: #3a8173; --su-dark: #2d6358; }
         body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; }
-        
-        /* Hero Section Styling */
-        .hero-section { background: var(--su-green); color: white; padding: 100px 0; border-bottom: 5px solid var(--su-dark); position: relative; }
-        .hero-section::after { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 50px; background: #f8f9fa; clip-path: polygon(0 100%, 100% 100%, 100% 0); }
-        
-        /* Card Styling */
-        .auth-card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); transition: 0.3s; height: 100%; }
-        .auth-card:hover { transform: translateY(-10px); }
-        .event-card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; }
-        .event-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        
-        /* Button Styling */
-        .btn-su { background: var(--su-green); color: white; border-radius: 10px; padding: 12px 25px; border: none; font-weight: bold; transition: 0.3s; }
-        .btn-su:hover { background: var(--su-dark); color: white; transform: scale(1.02); }
-        
         .navbar { background: var(--su-green) !important; padding: 15px 0; }
-        .nav-link { font-weight: 500; margin: 0 10px; }
+        .nav-link { font-weight: 500; margin: 0 10px; transition: 0.3s; }
         .nav-link.active { font-weight: bold; border-bottom: 2px solid white; }
+        .event-card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; }
+        .event-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .btn-su { background: var(--su-green); color: white; border-radius: 10px; border: none; font-weight: bold; }
+        .btn-su:hover { background: var(--su-dark); color: white; }
+        .status-table { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
 
-<?php if (!isset($_SESSION['owner_id'])): ?>
-    <div class="hero-section text-center">
-        <div class="container">
-            <div class="mb-4">
-                <i class="fas fa-store-alt fa-5x"></i>
-            </div>
-            <h1 class="fw-bold display-5">ระบบจองบูธสำหรับร้านค้า</h1>
-            <p class="lead opacity-75">SU Web Portal - ศูนย์รวมงานอีเวนท์และพื้นที่จัดแสดงสินค้า</p>
-        </div>
-    </div>
-
-    <div class="container" style="margin-top: -60px; position: relative; z-index: 10;">
-        <div class="row justify-content-center g-4">
-            <div class="col-md-5">
-                <div class="card auth-card p-4 text-center">
-                    <div class="card-body">
-                        <div class="text-primary mb-3"><i class="fas fa-user-lock fa-3x"></i></div>
-                        <h4 class="fw-bold">เข้าสู่ระบบ</h4>
-                        <p class="text-muted">มีบัญชีที่ผ่านการอนุมัติแล้ว? เข้าสู่ระบบเพื่อเริ่มจองบูธได้เลย</p>
-                        <hr class="my-4 opacity-25">
-                        <a href="user_login.php" class="btn btn-su w-100 py-3 shadow-sm">เข้าสู่ระบบ (Login)</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-5">
-                <div class="card auth-card p-4 text-center">
-                    <div class="card-body">
-                        <div class="text-success mb-3"><i class="fas fa-id-card fa-3x"></i></div>
-                        <h4 class="fw-bold">สมัครสมาชิกใหม่</h4>
-                        <p class="text-muted">ลงทะเบียนข้อมูลร้านค้าของคุณ เพื่อขอสิทธิ์เข้าใช้งานระบบจองบูธ</p>
-                        <hr class="my-4 opacity-25">
-                        <a href="register.php" class="btn btn-outline-success border-2 w-100 py-3 fw-bold" style="border-radius: 10px;">สมัครสมาชิก (Register)</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="text-center mt-5 text-muted small">
-            <p>© 2026 SU Web Portal Event Management System. All rights reserved.</p>
-        </div>
-    </div>
-
-<?php else: ?>
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="index.php">
-                <i class="fas fa-layer-group me-2"></i>SU Web Portal
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="userNavbar">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="index.php">หน้าหลัก</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="my_bookings.php">ประวัติการจอง</a>
-                    </li>
-                    <li class="nav-item ms-lg-4 border-start ps-lg-4">
-                        <div class="text-white d-flex align-items-center">
-                            <div class="text-end me-3">
-                                <small class="d-block opacity-75">ร้านค้า</small>
-                                <span class="fw-bold"><?php echo $_SESSION['shop_name']; ?></span>
-                            </div>
-                            <a href="logout_user.php" class="btn btn-sm btn-outline-light rounded-pill" onclick="return confirm('ยืนยันการออกจากระบบ?')">
-                                <i class="fas fa-sign-out-alt"></i>
-                            </a>
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.php">
+            <i class="fas fa-layer-group me-2"></i>SU Web Portal
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="userNavbar">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $filter == 'all' ? 'active' : ''; ?>" href="index.php">หน้าหลัก</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $filter == 'confirmed' ? 'active' : ''; ?>" href="index.php?filter=confirmed">ยืนยันแล้ว</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="my_bookings.php">ประวัติการจอง</a>
+                </li>
+                <li class="nav-item ms-lg-4 border-start ps-lg-4 text-white">
+                    <div class="d-flex align-items-center">
+                        <div class="text-end me-3">
+                            <small class="d-block opacity-75">ร้านค้า</small>
+                            <span class="fw-bold"><?php echo $_SESSION['shop_name']; ?></span>
                         </div>
-                    </li>
-                </ul>
+                        <a href="logout_user.php" class="btn btn-sm btn-outline-light rounded-pill" onclick="return confirm('ยืนยันการออกจากระบบ?')">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <?php if ($filter == 'confirmed'): ?>
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h3 class="fw-bold"><i class="fas fa-check-circle text-success me-2"></i>รายการจองที่ได้รับการยืนยัน</h3>
+                <p class="text-muted">กรุณาแจ้งความประสงค์การจัดกิจกรรมเพื่อรับ QR Code สำหรับบูธของคุณ</p>
             </div>
         </div>
-    </nav>
 
-    <div class="container mt-5">
+        <div class="status-table">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3">งานอีเวนท์</th>
+                        <th>ประเภทบูธ</th>
+                        <th>สถานะกิจกรรม</th>
+                        <th class="text-center">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($confirmed_bookings) > 0): ?>
+                        <?php foreach ($confirmed_bookings as $b): ?>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold"><?php echo htmlspecialchars($b['event_name']); ?></div>
+                            </td>
+                            <td><?php echo htmlspecialchars($b['type_name']); ?></td>
+                            <td>
+                                <?php if($b['has_activity'] === NULL): ?>
+                                    <span class="text-danger small"><i class="fas fa-exclamation-triangle me-1"></i>ยังไม่ได้เลือกแผนกิจกรรม</span>
+                                <?php elseif($b['has_activity'] == 'yes'): ?>
+                                    <span class="badge bg-primary px-3">จัดกิจกรรม</span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary px-3">ไม่มีกิจกรรม</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if($b['has_activity'] === NULL): ?>
+                                    <div class="btn-group btn-group-sm shadow-sm">
+                                        <a href="update_activity.php?id=<?php echo $b['id']; ?>&has=yes" class="btn btn-primary px-3">มีกิจกรรม</a>
+                                        <a href="update_activity.php?id=<?php echo $b['id']; ?>&has=no" class="btn btn-outline-secondary px-3">ไม่มี</a>
+                                    </div>
+                                <?php elseif($b['has_activity'] == 'yes'): ?>
+                                    <a href="manage_activity.php?id=<?php echo $b['id']; ?>" class="btn btn-sm btn-dark px-3 rounded-pill">
+                                        <i class="fas fa-qrcode me-1"></i> จัดการรอบ & QR
+                                    </a>
+                                <?php else: ?>
+                                    <span class="text-muted small">ยืนยันเสร็จสิ้น</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="4" class="text-center py-5 text-muted">ไม่พบรายการที่ได้รับการยืนยันในขณะนี้</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 text-center">
+            <a href="index.php" class="btn btn-link text-decoration-none text-muted">
+                <i class="fas fa-arrow-left me-2"></i>กลับสู่หน้าเลือกงานอีเวนท์
+            </a>
+        </div>
+
+    <?php else: ?>
         <div class="row mb-4 align-items-end">
             <div class="col-md-7">
                 <h3 class="fw-bold mb-1">งานอีเวนท์ที่เปิดให้จอง</h3>
@@ -161,13 +195,12 @@ if (isset($_SESSION['owner_id'])) {
                     <div class="bg-white p-5 rounded-4 shadow-sm">
                         <i class="fas fa-calendar-times fa-4x text-muted opacity-25 mb-3"></i>
                         <h5 class="text-muted">ขณะนี้ยังไม่มีงานอีเวนท์เปิดรับจอง</h5>
-                        <p class="small text-muted mb-0">กรุณากลับมาตรวจสอบใหม่อีกครั้งภายหลัง</p>
                     </div>
                 </div>
             <?php endif; ?>
         </div>
-    </div>
-<?php endif; ?>
+    <?php endif; ?>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

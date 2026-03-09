@@ -1,21 +1,22 @@
 <?php
 session_start();
-// ตรวจสอบว่า User ล็อกอินหรือยัง
+include 'config.php';
+
+// ตรวจสอบการ Login
 if (!isset($_SESSION['owner_id'])) {
     header("Location: user_login.php");
     exit;
 }
-include 'config.php';
 
 $owner_id = $_SESSION['owner_id'];
 
-// ดึงรายการจองทั้งหมดของเจ้าของบูธคนนี้
-$sql = "SELECT b.*, e.event_name, e.event_date, e.location, t.type_name, t.price 
+// ดึงข้อมูลประวัติการจองทั้งหมดของร้านค้านี้
+$sql = "SELECT b.*, e.event_name, e.event_date, t.type_name, t.price 
         FROM event_bookings b
-        JOIN events e ON b.event_id = e.id
-        JOIN booth_types t ON b.type_id = t.id
+        LEFT JOIN events e ON b.event_id = e.id
+        LEFT JOIN booth_types t ON b.type_id = t.id
         WHERE b.owner_id = ?
-        ORDER BY b.created_at DESC";
+        ORDER BY b.id DESC";
 $stmt = $conn->prepare($sql);
 $stmt->execute([$owner_id]);
 $bookings = $stmt->fetchAll();
@@ -54,23 +55,35 @@ $bookings = $stmt->fetchAll();
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark py-3">
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="index.php">SU Web Portal</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-content="#navbarNav">
+        <a class="navbar-brand fw-bold" href="index.php">
+            <i class="fas fa-layer-group me-2"></i>SU Web Portal
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
+        <div class="collapse navbar-collapse" id="userNavbar">
             <ul class="navbar-nav ms-auto align-items-center">
                 <li class="nav-item">
                     <a class="nav-link" href="index.php">หน้าหลัก</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="index.php?filter=confirmed">ยืนยันแล้ว</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link active" href="my_bookings.php">ประวัติการจอง</a>
                 </li>
-                <li class="nav-item ms-lg-3">
-                    <span class="text-white-50 small">ร้านค้า: <b><?php echo $_SESSION['shop_name']; ?></b></span>
-                    <a href="logout_user.php" class="btn btn-sm btn-outline-light ms-2">ออกจากระบบ</a>
+                <li class="nav-item ms-lg-4 border-start ps-lg-4 text-white">
+                    <div class="d-flex align-items-center">
+                        <div class="text-end me-3">
+                            <small class="d-block opacity-75">ร้านค้า</small>
+                            <span class="fw-bold"><?php echo $_SESSION['shop_name']; ?></span>
+                        </div>
+                        <a href="logout_user.php" class="btn btn-sm btn-outline-light rounded-pill" onclick="return confirm('ยืนยันการออกจากระบบ?')">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
                 </li>
             </ul>
         </div>
@@ -97,7 +110,7 @@ $bookings = $stmt->fetchAll();
                                 <div>
                                     <h5 class="fw-bold mb-1 text-dark"><?php echo htmlspecialchars($b['event_name']); ?></h5>
                                     <p class="mb-0 text-muted small">
-                                        <i class="fas fa-map-marker-alt me-1"></i> <?php echo htmlspecialchars($b['location']); ?> | 
+                                        
                                         <i class="fas fa-clock me-1"></i> <?php echo date('d/m/Y', strtotime($b['event_date'])); ?>
                                     </p>
                                 </div>
