@@ -7,8 +7,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $type_id = $_POST['type_id'];
     $owner_id = $_SESSION['owner_id'];
     $customer_name = $_SESSION['shop_name'];
-    // รับเบอร์โทรจากหน้าก่อนหน้า (ถ้ามี) หรือกำหนดค่าเริ่มต้น
+    
+    // รับเบอร์โทรศัพท์ และ รายละเอียดกิจกรรมที่เพิ่มมาใหม่
     $customer_phone = $_POST['customer_phone'] ?? '000-000-0000';
+    $activity_detail = $_POST['activity_detail'] ?? ''; 
     $slip_name = null;
 
     // 1. จัดการอัปโหลดไฟล์สลิป (ถ้ามีการแนบมา)
@@ -27,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
         $conn->beginTransaction();
         
-        // 2. ตรวจสอบจำนวนบูธคงเหลืออีกครั้ง (ป้องกันการจองซ้ำซ้อนในวินาทีเดียวกัน)
+        // 2. ตรวจสอบจำนวนบูธคงเหลืออีกครั้งเพื่อป้องกันการจองเกิน (Race Condition)
         $stmt_check = $conn->prepare("SELECT total_slots FROM booth_types WHERE id = ? FOR UPDATE");
         $stmt_check->execute([$type_id]);
         $total = $stmt_check->fetchColumn();
@@ -37,11 +39,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $booked = $stmt_count->fetchColumn();
 
         if ($booked < $total) {
-            // 3. บันทึกข้อมูลการจอง
-            $sql = "INSERT INTO event_bookings (event_id, type_id, owner_id, customer_name, customer_phone, payment_slip, booking_status) 
-                    VALUES (?, ?, ?, ?, ?, ?, 'pending')";
+            // 3. บันทึกข้อมูลการจอง พร้อมรายละเอียดกิจกรรม
+            $sql = "INSERT INTO event_bookings (event_id, type_id, owner_id, customer_name, customer_phone, payment_slip, booking_status, activity_detail) 
+                    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([$event_id, $type_id, $owner_id, $customer_name, $customer_phone, $slip_name]);
+            $stmt->execute([$event_id, $type_id, $owner_id, $customer_name, $customer_phone, $slip_name, $activity_detail]);
             
             $conn->commit();
             // เมื่อจองสำเร็จ ให้ส่งไปหน้า success
