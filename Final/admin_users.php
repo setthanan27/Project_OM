@@ -98,44 +98,57 @@ $users = $stmt->fetchAll();
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (count($users) > 0): ?>
-                        <?php foreach ($users as $u): ?>
-                        <tr>
-                            <td class="small text-muted"><?php echo date('d/m/Y H:i', strtotime($u['created_at'])); ?></td>
-                            <td><span class="fw-bold text-dark"><?php echo htmlspecialchars($u['shop_name']); ?></span></td>
-                            <td><?php echo htmlspecialchars($u['owner_name']); ?></td>
-                            <td><?php echo htmlspecialchars($u['phone']); ?></td>
-                            <td>
-                                <?php if($u['status'] == 'pending'): ?>
-                                    <span class="badge-pending"><i class="fas fa-clock me-1"></i> รออนุมัติ</span>
-                                <?php elseif($u['status'] == 'approved'): ?>
-                                    <span class="badge-approved"><i class="fas fa-check-circle me-1"></i> อนุมัติแล้ว</span>
-                                <?php else: ?>
-                                    <span class="badge-rejected"><i class="fas fa-times-circle me-1"></i> ปฏิเสธ</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-center">
-                                <?php if($u['status'] == 'pending'): ?>
-                                    <a href="update_user.php?id=<?php echo $u['id']; ?>&action=approve" 
-                                       class="btn btn-success btn-sm px-3 shadow-sm" 
-                                       onclick="return confirm('ยืนยันการอนุมัติสมาชิกนี้?')">อนุมัติ</a>
-                                    
-                                    <a href="update_user.php?id=<?php echo $u['id']; ?>&action=reject" 
-                                       class="btn btn-outline-danger btn-sm px-3" 
-                                       onclick="return confirm('ยืนยันการปฏิเสธสมาชิกนี้?')">ปฏิเสธ</a>
-                                <?php else: ?>
-                                    <a href="update_user.php?id=<?php echo $u['id']; ?>&action=pending" 
-                                       class="btn btn-link btn-sm text-decoration-none text-muted">แก้ไขสถานะ</a>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+    <?php if (count($users) > 0): ?>
+        <?php foreach ($users as $u): ?>
+        <tr>
+            <td class="small text-muted"><?php echo date('d/m/Y H:i', strtotime($u['created_at'])); ?></td>
+            <td><span class="fw-bold text-dark"><?php echo htmlspecialchars($u['shop_name']); ?></span></td>
+            <td><?php echo htmlspecialchars($u['owner_name']); ?></td>
+            <td><?php echo htmlspecialchars($u['phone']); ?></td>
+            <td>
+                <?php if($u['status'] == 'pending'): ?>
+                    <span class="badge-pending"><i class="fas fa-clock me-1"></i> รออนุมัติ</span>
+                <?php elseif($u['status'] == 'approved'): ?>
+                    <span class="badge-approved"><i class="fas fa-check-circle me-1"></i> อนุมัติแล้ว</span>
+                <?php else: ?>
+                    <span class="badge-rejected"><i class="fas fa-times-circle me-1"></i> ปฏิเสธ</span>
+                <?php endif; ?>
+            </td>
+            <td class="text-center">
+                <div class="d-flex justify-content-center align-items-center gap-2">
+                    <?php if($u['status'] == 'pending'): ?>
+                        <a href="update_user.php?id=<?php echo $u['id']; ?>&action=approve" 
+                           class="btn btn-success btn-sm px-3 shadow-sm" 
+                           onclick="return confirm('ยืนยันการอนุมัติสมาชิกนี้?')">อนุมัติ</a>
+                        
+                        <a href="update_user.php?id=<?php echo $u['id']; ?>&action=reject" 
+                           class="btn btn-outline-danger btn-sm px-3" 
+                           onclick="return confirm('ยืนยันการปฏิเสธสมาชิกนี้?')">ปฏิเสธ</a>
                     <?php else: ?>
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">ไม่พบข้อมูลการสมัครสมาชิก</td>
-                        </tr>
+                        <a href="update_user.php?id=<?php echo $u['id']; ?>&action=pending" 
+                           class="btn btn-link btn-sm text-decoration-none text-muted" title="แก้ไขสถานะ">
+                           <i class="fas fa-edit me-1"></i> แก้ไข
+                        </a>
+
+                        <?php if($u['status'] == 'rejected'): ?>
+                            <a href="delete_user.php?id=<?php echo $u['id']; ?>" 
+                               class="btn btn-outline-danger btn-sm border-0" 
+                               title="ลบสมาชิกนี้"
+                               onclick="return confirm('ยืนยันการลบข้อมูลสมาชิกนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')">
+                               <i class="fas fa-trash-alt"></i>
+                            </a>
+                        <?php endif; ?>
                     <?php endif; ?>
-                </tbody>
+                </div>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <tr>
+            <td colspan="6" class="text-center py-5 text-muted">ไม่พบข้อมูลการสมัครสมาชิก</td>
+        </tr>
+    <?php endif; ?>
+</tbody>
             </table>
         </div>
     </div>

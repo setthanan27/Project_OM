@@ -101,8 +101,7 @@ $total_slots = $stmt_slots->fetch()['total'] ?? 0;
         <li onclick="location.href='admin_bookings.php'"><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
         <li onclick="location.href='admin_users.php'"><i class="fas fa-users-cog"></i> จัดการสมาชิก</li>
         <li onclick="location.href='admin_stats.php'"><i class="fas fa-chart-pie"></i> รายงานสถิติ</li>
-        <hr class="mx-3 my-2">
-        <li><i class="fas fa-cog"></i> ตั้งค่าระบบ</li>
+        
     </ul>
 </div>
 

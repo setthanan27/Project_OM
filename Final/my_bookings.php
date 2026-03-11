@@ -71,7 +71,7 @@ $bookings = $stmt->fetchAll();
                     <a class="nav-link" href="index.php">หน้าหลัก</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="index.php?filter=confirmed">ยืนยันแล้ว</a>
+                    <a class="nav-link" href="index.php?filter=confirmed">บูธของฉัน</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" href="my_bookings.php">ประวัติการจอง</a>

@@ -49,7 +49,7 @@ $booth_types = $stmt_types->fetchAll();
 <div class="top-nav justify-content-between">
     <div class="d-flex align-items-center">
         <i class="fas fa-layer-group me-3 fs-4"></i>
-        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">จัดการอีเวนท์</span></h5>
+        <h5 class="mb-0 fw-bold">Admin Panel <span class="fw-light opacity-75 ms-2">Booth Management</span></h5>
     </div>
     <div class="d-flex align-items-center">
         <div class="text-end me-3 d-none d-md-block">
@@ -70,8 +70,7 @@ $booth_types = $stmt_types->fetchAll();
 <div class="sidebar">
     <ul class="sidebar-menu">
         <li onclick="location.href='admin_panel.php'"><i class="fas fa-chart-line"></i> Dashboard</li>
-        <li onclick="location.href='admin_create_event.php'"><i class="fas fa-calendar-plus"></i> สร้างงานอีเวนท์</li>
-        <li class="active" onclick="location.href='admin_bookings.php'"><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
+        <li class="active" onclick="location.href='admin_bookings.php'"><i class="fas fa-tasks me-2"></i> จัดการข้อมูลบูธ</li>
     </ul>
 </div>
 
