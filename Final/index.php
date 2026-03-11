@@ -55,8 +55,8 @@ $confirmed_bookings = $stmt_conf->fetchAll();
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold" href="index.php">
-            <i class="fas fa-layer-group me-2"></i>SU Web Portal
-        </a>
+            <i class="fas fa-layer-group me-2"></i>Booth Booking System
+         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
             <span class="navbar-toggler-icon"></span>
         </button>

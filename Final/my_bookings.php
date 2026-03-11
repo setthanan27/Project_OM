@@ -35,7 +35,9 @@ $bookings = $stmt->fetchAll();
         body { background-color: #f4f7f6; font-family: 'Sarabun', sans-serif; }
         
         /* Navbar Style ให้เหมือนหน้า Index */
-        .navbar { background: var(--su-green); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .navbar { background: var(--su-green) !important; padding: 15px 0; }
+        .nav-link { font-weight: 500; margin: 0 10px; transition: 0.3s; }
+        .nav-link.active { font-weight: bold; border-bottom: 2px solid white; }
         
         .main-container { padding: 40px 0; }
         .page-title { border-left: 5px solid var(--su-green); padding-left: 15px; margin-bottom: 30px; }
@@ -58,7 +60,7 @@ $bookings = $stmt->fetchAll();
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold" href="index.php">
-            <i class="fas fa-layer-group me-2"></i>SU Web Portal
+            <i class="fas fa-layer-group me-2"></i>Booth Booking System
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
             <span class="navbar-toggler-icon"></span>

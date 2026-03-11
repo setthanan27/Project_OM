@@ -60,12 +60,12 @@ if ($is_logged_in) {
 
 <nav class="navbar navbar-dark mb-4 shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="#"><i class="fas fa-layer-group me-2"></i>SU Activity</a>
+        <a class="navbar-brand fw-bold" href="#"><i class="fas fa-layer-group me-2"></i>EventQ+ Activity</a>
         <div class="d-flex align-items-center">
             <?php if ($is_logged_in): ?>
                 <span class="text-white me-2 small d-none d-md-inline"><?php echo htmlspecialchars($user_name); ?></span>
                 <img src="<?php echo $user_picture; ?>" class="profile-img">
-                <a href="logout.php?back_id=<?php echo $booking_id; ?>" class="btn btn-outline-light btn-sm ms-3 rounded-pill">ออกระบบ</a>
+                <a href="logout.php?back_id=<?php echo $booking_id; ?>" class="btn btn-outline-light btn-sm ms-3 rounded-pill">ออกจากระบบ</a>
             <?php else: ?>
                 <a href="google_login_page.php?id=<?php echo $booking_id; ?>" class="btn btn-primary btn-sm rounded-pill px-3">
                     <i class="fab fa-google me-1"></i> Login
