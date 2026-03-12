@@ -12,8 +12,9 @@ $user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'] ?? 'ผู้ใช้งาน';
 $user_picture = $_SESSION['user_picture'] ?? 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
-// 2. ดึงข้อมูลการจอง และหา ID บูธล่าสุดเพื่อทำปุ่มย้อนกลับ
-$sql = "SELECT r.id as res_id, r.*, b.id as b_id, o.shop_name, e.event_name, a.status as round_status, a.start_time, a.end_time 
+// 2. ดึงข้อมูลการจอง (ดึงสถานะรายบุคคลและข้อความบันทึกมาด้วย)
+$sql = "SELECT r.id as res_id, r.status as user_res_status, r.*, b.id as b_id, o.shop_name, e.event_name, 
+               a.status as round_status, a.start_time, a.end_time, a.completion_note 
         FROM user_activity_reservations r
         JOIN booth_activities a ON r.activity_id = a.id
         JOIN event_bookings b ON a.booking_id = b.id
@@ -25,14 +26,14 @@ $stmt = $conn->prepare($sql);
 $stmt->execute([$user_id]);
 $my_bookings = $stmt->fetchAll();
 
-// หา ID บูธล่าสุดที่จองไว้เพื่อทำ Link ย้อนกลับ
+// หา ID บูธล่าสุดเพื่อทำปุ่มย้อนกลับ (ใช้จากรายการล่าสุดที่ยังไม่จบ)
 $latest_booth_id = (count($my_bookings) > 0) ? $my_bookings[0]['b_id'] : null;
 $back_link = $latest_booth_id ? "activity_details.php?id=" . $latest_booth_id : "index.php";
 
 // 3. เช็คสถานะการเรียกคิว
 $has_calling = false;
 foreach ($my_bookings as $check) {
-    if ($check['round_status'] == 'calling') {
+    if ($check['round_status'] == 'calling' && $check['user_res_status'] == 'confirmed') {
         $has_calling = true;
         break;
     }
@@ -57,9 +58,10 @@ foreach ($my_bookings as $check) {
         .profile-img-main { width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--su-soft); object-fit: cover; }
         .alert-calling { background: #fff9db; border: none; border-left: 5px solid #fcc419; border-radius: 15px; animation: pulse-bg 2s infinite; }
         @keyframes pulse-bg { 0% { transform: scale(1); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
-        .history-card { border: none; border-radius: 20px; background: white; transition: 0.3s; padding: 20px; }
+        .history-card { border: none; border-radius: 20px; background: white; transition: 0.3s; padding: 20px; position: relative; }
         .badge-status { padding: 8px 16px; border-radius: 12px; font-weight: 700; font-size: 0.75rem; }
         .time-box { background: var(--su-soft); color: var(--su-green); border-radius: 10px; padding: 5px 12px; font-weight: 800; display: inline-block; }
+        .note-box { background: #e7f5ff; border-radius: 12px; padding: 12px; font-size: 0.85rem; color: #1971c2; border-left: 4px solid #339af0; }
     </style>
 </head>
 <body>
@@ -91,7 +93,8 @@ foreach ($my_bookings as $check) {
 
 <div class="container px-3 pb-5">
     <div class="notification-area">
-        <?php foreach ($my_bookings as $res): if ($res['round_status'] == 'calling'): ?>
+        <?php foreach ($my_bookings as $res): 
+            if ($res['round_status'] == 'calling' && $res['user_res_status'] == 'confirmed'): ?>
             <div class="alert alert-calling shadow-sm p-4 d-flex align-items-center justify-content-between mb-4">
                 <div class="d-flex align-items-center">
                     <div class="bg-warning rounded-circle p-3 me-3 d-none d-sm-block">
@@ -102,7 +105,7 @@ foreach ($my_bookings as $check) {
                         <p class="mb-0 text-muted small">โปรดไปที่บูธ <strong><?php echo htmlspecialchars($res['shop_name']); ?></strong> ทันที</p>
                     </div>
                 </div>
-                <div class="text-warning fw-bold animate-pulse"><i class="fas fa-walking fa-2x"></i></div>
+                <div class="text-warning fw-bold"><i class="fas fa-walking fa-2x animate-pulse"></i></div>
             </div>
         <?php endif; endforeach; ?>
     </div>
@@ -123,10 +126,12 @@ foreach ($my_bookings as $check) {
                                 </div>
                             </div>
                             <div class="text-end">
-                                <?php if ($res['round_status'] == 'calling'): ?>
+                                <?php if ($res['user_res_status'] == 'cancelled'): ?>
+                                    <span class="badge-status bg-danger-subtle text-danger">ยกเลิกแล้ว</span>
+                                <?php elseif ($res['round_status'] == 'calling'): ?>
                                     <span class="badge-status bg-warning text-dark">เรียกคิว</span>
                                 <?php elseif ($res['round_status'] == 'cancelled'): ?>
-                                    <span class="badge-status bg-danger-subtle text-danger">ยกเลิก</span>
+                                    <span class="badge-status bg-danger-subtle text-danger">บูธยกเลิก</span>
                                 <?php elseif ($res['round_status'] == 'finished'): ?>
                                     <span class="badge-status bg-light text-muted">เสร็จสิ้น</span>
                                 <?php else: ?>
@@ -135,7 +140,14 @@ foreach ($my_bookings as $check) {
                             </div>
                         </div>
 
-                        <?php if ($res['round_status'] == 'pending'): ?>
+                        <?php if (!empty($res['completion_note'])): ?>
+                            <div class="note-box mt-3">
+                                <i class="fas fa-comment-dots me-1"></i>
+                                <strong>บันทึกจากเจ้าของบูธ:</strong> <?php echo htmlspecialchars($res['completion_note']); ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($res['round_status'] == 'pending' && $res['user_res_status'] == 'confirmed'): ?>
                             <div class="mt-3 border-top pt-2 text-end">
                                 <button onclick="cancelBooking(<?php echo $res['res_id']; ?>)" class="btn btn-sm text-danger border-0 small p-0">
                                     <i class="fas fa-times-circle me-1"></i> ยกเลิกการจอง
@@ -154,24 +166,21 @@ foreach ($my_bookings as $check) {
 </div>
 
 <script>
-    // 1. ระบบแจ้งเตือนเสียงและสั่น
+    // 1. ระบบเสียงแจ้งเตือน
     function playAlert() {
         const sound = document.getElementById('notificationSound');
         if (sound) { sound.play().catch(e => {}); }
-        if ("vibrate" in navigator) { navigator.vibrate([200, 100, 200]); }
     }
-
-    <?php if ($has_calling): ?>
-        setTimeout(playAlert, 1000);
-    <?php endif; ?>
+    <?php if ($has_calling): ?> setTimeout(playAlert, 1000); <?php endif; ?>
 
     // 2. รีเฟรชหน้าเว็บทุก 15 วินาที
     setTimeout(function(){ window.location.reload(); }, 15000);
 
-    // 3. ฟังก์ชันยกเลิกการจอง
+    // 3. ฟังก์ชันยกเลิก (เปลี่ยนเป็น cancel เพื่อเก็บ Log)
     function cancelBooking(id) {
         Swal.fire({
             title: 'ต้องการยกเลิกใช่ไหม?',
+            text: "ระบบจะคืนสิทธิ์ให้ผู้อื่นทันที",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -179,30 +188,18 @@ foreach ($my_bookings as $check) {
             cancelButtonText: 'ปิด'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = 'delete_reservation.php?id=' + id;
+                window.location.href = 'cancel_reservation.php?id=' + id;
             }
         });
     }
 
-    // 4. แก้ไขบั๊ก SweetAlert เด้งซ้ำ: เช็คพารามิเตอร์และล้าง URL ทันที
+    // 4. แจ้งเตือนสถานะสำเร็จ
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status');
-
-    if (status === 'success' || status === 'cancelled') {
-        let title = (status === 'success') ? 'จองสำเร็จ!' : 'ยกเลิกสำเร็จ';
-        let icon = (status === 'success') ? 'success' : 'info';
-
-        Swal.fire({ 
-            title: title, 
-            icon: icon, 
-            confirmButtonColor: '#3a8173',
-            timer: 3000,
-            timerProgressBar: true
-        }).then(() => {
-            // ล้างค่า status ออกจาก URL ทันทีหลังจากกด OK หรือหมดเวลา
-            const cleanUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-        });
+    if (status) {
+        let title = (status === 'success') ? 'จองสำเร็จ!' : 'ดำเนินการสำเร็จ';
+        Swal.fire({ title: title, icon: 'success', confirmButtonColor: '#3a8173', timer: 2000, showConfirmButton: false });
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 </script>
 </body>

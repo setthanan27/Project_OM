@@ -23,17 +23,42 @@ if ($actual_owner != $owner_id) {
     die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้"); // ป้องกันการเปลี่ยน ID บน URL
 }
 
-// --- 3. จัดการการเพิ่มรอบเวลากิจกรรม ---
+// --- 3. จัดการการเพิ่มรอบเวลากิจกรรม (เวอร์ชันบอกรอบที่ชน) ---
+$error_msg = ""; 
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_time'])) {
     $start_time = $_POST['start_time'];
     $end_time = $_POST['end_time'];
     $max_slots = $_POST['max_slots'] ?: 10;
     
     if (!empty($start_time) && !empty($end_time)) {
-        $stmt_add = $conn->prepare("INSERT INTO booth_activities (booking_id, start_time, end_time, max_slots, status) VALUES (?, ?, ?, ?, 'pending')");
-        $stmt_add->execute([$booking_id, $start_time, $end_time, $max_slots]);
-        header("Location: manage_activity.php?id=" . $booking_id);
-        exit;
+        if ($start_time >= $end_time) {
+            $error_msg = "เวลาเริ่มกิจกรรมต้องมาก่อนเวลาสิ้นสุด";
+        } else {
+            // 3.1 ค้นหาช่วงเวลาที่ทับซ้อนและดึงเวลาของรอบนั้นออกมาด้วย
+            $sql_overlap = "SELECT start_time, end_time FROM booth_activities 
+                            WHERE booking_id = ? 
+                            AND status != 'cancelled' 
+                            AND (? < end_time AND ? > start_time)
+                            LIMIT 1";
+            $stmt_overlap = $conn->prepare($sql_overlap);
+            $stmt_overlap->execute([$booking_id, $start_time, $end_time]);
+            $overlap_row = $stmt_overlap->fetch();
+
+            if ($overlap_row) {
+                // 3.2 แปลงเวลาที่ดึงมาให้อ่านง่ายขึ้น
+                $conf_start = date('H:i', strtotime($overlap_row['start_time']));
+                $conf_end = date('H:i', strtotime($overlap_row['end_time']));
+                
+                $error_msg = "ไม่สามารถเพิ่มได้! เวลาที่คุณเลือกทับซ้อนกับรอบที่มีอยู่แล้ว (ช่วงเวลา $conf_start - $conf_end น.)";
+            } else {
+                // 3.3 ถ้าไม่ชนรอบไหนเลย ให้บันทึก
+                $stmt_add = $conn->prepare("INSERT INTO booth_activities (booking_id, start_time, end_time, max_slots, status) VALUES (?, ?, ?, ?, 'pending')");
+                $stmt_add->execute([$booking_id, $start_time, $end_time, $max_slots]);
+                header("Location: manage_activity.php?id=" . $booking_id);
+                exit;
+            }
+        }
     }
 }
 
@@ -63,7 +88,6 @@ $back_link = isset($_SESSION['owner_id']) ? "index.php?filter=confirmed" : "admi
 $public_url = "https://felinely-hypochloremic-rosy.ngrok-free.dev"; 
 $qr_data = $public_url . "/finals/Project_OM/Final/activity_details.php?id=" . $booking_id;
 ?>
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -74,36 +98,61 @@ $qr_data = $public_url . "/finals/Project_OM/Final/activity_details.php?id=" . $
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --su-green: #3a8173; --su-light: #f4f7f6; }
-        body { background-color: var(--su-light); font-family: 'Sarabun', sans-serif; color: #444; }
-        .card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
-        .header-card { background: linear-gradient(135deg, var(--su-green), #2d6358); color: white; }
-        .table { border-collapse: separate; border-spacing: 0 10px; }
-        .table tbody tr { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.02); border-radius: 15px; }
-        .table tbody td { border: none; padding: 20px 15px; }
-        .btn-su { background: var(--su-green); color: white; border-radius: 12px; }
-        .btn-su:hover { background: #2d6358; color: white; }
-        .animate-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
-        @media print { .no-print { display: none; } body { background: white; } }
+        :root { --su-green: #3a8173; --su-dark: #2d6358; --su-light: #f8fafb; }
+        body { background-color: var(--su-light); font-family: 'Sarabun', sans-serif; color: #334155; }
+        
+        /* Card & Header */
+        .card { border: none; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); background: #ffffff; }
+        .header-card { background: linear-gradient(135deg, var(--su-green), var(--su-dark)); color: white; padding: 2.5rem; border-radius: 30px; }
+        
+        /* Table Styles */
+        .table { margin-bottom: 0; }
+        .table thead th { background: #f1f5f9; border: none; padding: 1rem; color: #64748b; font-weight: 600; font-size: 0.85rem; }
+        .table tbody td { padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .status-badge { padding: 0.5rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.8rem; }
+        
+        /* Buttons */
+        .btn-su { background: var(--su-green); color: white; border-radius: 14px; transition: 0.3s; border: none; }
+        .btn-su:hover { background: var(--su-dark); color: white; transform: translateY(-2px); }
+        .btn-action { width: 38px; height: 38px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; }
+
+        /* QR Printing */
+        .qr-card { border: 2px dashed #e2e8f0; position: sticky; top: 2rem; }
+        .bg-su-green { background-color: var(--su-green); color: white; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .animate-pulse { animation: pulse 1.5s infinite; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { max-width: 100%; width: 100%; }
+            .qr-print-area { 
+                border: 2px solid #333; 
+                padding: 3rem; 
+                text-align: center; 
+                border-radius: 2rem;
+                max-width: 500px;
+                margin: 2rem auto;
+            }
+            #qrcode img { margin: 0 auto; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container py-5">
-    <div class="row mb-4 no-print">
-        <div class="col-12">
-            <div class="card header-card p-4 d-flex flex-row justify-content-between align-items-center">
-                <div>
-                    <a href="<?php echo $back_link; ?>" class="btn btn-light btn-sm rounded-pill mb-2 shadow-sm">
-                        <i class="fas fa-chevron-left me-1"></i> ย้อนกลับ
-                    </a>
-                    <h2 class="fw-bold mb-0"><?php echo htmlspecialchars($booking['shop_name']); ?></h2>
-                    <p class="mb-0 opacity-75"><i class="fas fa-calendar-alt me-2"></i><?php echo htmlspecialchars($booking['event_name']); ?></p>
-                </div>
-                <div class="text-end d-none d-md-block">
-                    <i class="fas fa-store-alt fa-3x opacity-25"></i>
-                </div>
+    <div class="header-card mb-5 no-print shadow-lg">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <a href="<?php echo $back_link; ?>" class="btn btn-light btn-sm rounded-pill px-3 mb-3 text-dark fw-bold">
+                    <i class="fas fa-arrow-left me-2"></i>กลับหน้าหลัก
+                </a>
+                <h1 class="display-5 fw-bold mb-1"><?php echo htmlspecialchars($booking['shop_name']); ?></h1>
+                <p class="lead mb-0 opacity-75"><i class="fas fa-map-marker-alt me-2"></i><?php echo htmlspecialchars($booking['event_name']); ?></p>
+            </div>
+            <div class="col-md-4 text-end d-none d-md-block">
+                <i class="fas fa-store fa-5x opacity-25"></i>
             </div>
         </div>
     </div>
@@ -111,101 +160,139 @@ $qr_data = $public_url . "/finals/Project_OM/Final/activity_details.php?id=" . $
     <div class="row g-4">
         <div class="col-lg-8 no-print">
             <div class="card p-4 mb-4">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="rounded-circle bg-light p-2 me-3"><i class="fas fa-plus text-success"></i></div>
-                    <h5 class="fw-bold mb-0">เพิ่มรอบเวลากิจกรรม</h5>
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-success bg-opacity-10 p-2 rounded-3 me-3">
+                        <i class="fas fa-plus text-success fs-4"></i>
+                    </div>
+                    <h4 class="fw-bold mb-0">เพิ่มรอบกิจกรรม</h4>
                 </div>
+                
+                <?php if ($error_msg): ?>
+                    <div class="alert alert-danger border-0 rounded-4 mb-4">
+                        <i class="fas fa-circle-exclamation me-2"></i><?php echo $error_msg; ?>
+                    </div>
+                <?php endif; ?>
+
                 <form method="POST" class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label small text-muted">เวลาเริ่ม</label>
-                        <input type="time" name="start_time" class="form-control form-control-lg border-0 bg-light" required>
+                        <label class="form-label small fw-bold text-muted">เวลาเริ่ม</label>
+                        <input type="time" name="start_time" class="form-control form-control-lg border-0 bg-light rounded-4" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small text-muted">เวลาสิ้นสุด</label>
-                        <input type="time" name="end_time" class="form-control form-control-lg border-0 bg-light" required>
+                        <label class="form-label small text-muted fw-bold">เวลาสิ้นสุด</label>
+                        <input type="time" name="end_time" class="form-control form-control-lg border-0 bg-light rounded-4" required>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small text-muted">จำกัด (คน)</label>
-                        <input type="number" name="max_slots" class="form-control form-control-lg border-0 bg-light" value="10" min="1" required>
+                        <label class="form-label small text-muted fw-bold">จำนวนคน</label>
+                        <input type="number" name="max_slots" class="form-control form-control-lg border-0 bg-light rounded-4 text-center" value="10" min="1" required>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" name="add_time" class="btn btn-su btn-lg w-100 fw-bold">
+                        <button type="submit" name="add_time" class="btn btn-su btn-lg w-100 shadow-sm">
                             <i class="fas fa-save"></i>
                         </button>
                     </div>
                 </form>
             </div>
 
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr class="text-muted small">
-                            <th class="ps-4">ลำดับ</th>
-                            <th>ช่วงเวลา</th>
-                            <th class="text-center">จอง/จำกัด</th>
-                            <th>สถานะ</th>
-                            <th class="text-end pe-4">จัดการรอบ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($activities as $index => $act): ?>
-                        <tr>
-                            <td class="ps-4">#<?php echo $index + 1; ?></td>
-                            <td class="fw-bold"><?php echo date('H:i', strtotime($act['start_time'])); ?> - <?php echo date('H:i', strtotime($act['end_time'])); ?> น.</td>
-                            <td class="text-center">
-                                <span class="badge rounded-pill <?php echo ($act['current_booked'] >= $act['max_slots']) ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'; ?>">
-                                    <?php echo $act['current_booked']; ?> / <?php echo $act['max_slots']; ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if ($act['status'] == 'calling'): ?>
-                                    <span class="badge bg-warning text-dark animate-pulse">กำลังเรียก</span>
-                                <?php elseif ($act['status'] == 'finished'): ?>
-                                    <span class="badge bg-light text-muted">จบกิจกรรม</span>
-                                <?php elseif ($act['status'] == 'cancelled'): ?>
-                                    <span class="badge bg-danger-subtle text-danger">ยกเลิก</span>
-                                <?php else: ?>
-                                    <span class="badge bg-info-subtle text-info">รอเรียก</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end pe-4">
-                                <div class="btn-group">
-                                    <?php if ($act['status'] == 'pending'): ?>
-                                        <a href="update_round_status.php?id=<?php echo $act['id']; ?>&action=call&booking_id=<?php echo $booking_id; ?>" class="btn btn-sm btn-success"><i class="fas fa-play"></i></a>
-                                    <?php elseif ($act['status'] == 'calling'): ?>
-                                        <a href="update_round_status.php?id=<?php echo $act['id']; ?>&action=finish&booking_id=<?php echo $booking_id; ?>" class="btn btn-sm btn-primary"><i class="fas fa-check"></i></a>
+            <div class="card overflow-hidden">
+                <div class="p-4 border-bottom">
+                    <h5 class="fw-bold mb-0">รายการรอบกิจกรรมทั้งหมด</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">ลำดับ</th>
+                                <th>ช่วงเวลา</th>
+                                <th class="text-center">จองแล้ว / จำกัด</th>
+                                <th>สถานะ</th>
+                                <th class="text-end pe-4">ดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($activities as $index => $act): ?>
+                            <tr>
+                                <td class="ps-4 text-muted fw-bold">#<?php echo $index + 1; ?></td>
+                                <td>
+                                    <span class="fs-5 fw-bold"><?php echo date('H:i', strtotime($act['start_time'])); ?> - <?php echo date('H:i', strtotime($act['end_time'])); ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                        <span class="fw-bold <?php echo ($act['current_booked'] >= $act['max_slots']) ? 'text-danger' : 'text-success'; ?>">
+                                            <?php echo $act['current_booked']; ?> / <?php echo $act['max_slots']; ?>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php if ($act['status'] == 'calling'): ?>
+                                        <span class="status-badge bg-warning text-dark animate-pulse"><i class="fas fa-bullhorn me-2"></i>กำลังเรียก</span>
+                                    <?php elseif ($act['status'] == 'finished'): ?>
+                                        <span class="status-badge bg-secondary text-white">จบกิจกรรม</span>
+                                    <?php elseif ($act['status'] == 'cancelled'): ?>
+                                        <span class="status-badge bg-danger text-white">ยกเลิก</span>
+                                    <?php else: ?>
+                                        <span class="status-badge bg-info bg-opacity-10 text-info">รอเรียก</span>
                                     <?php endif; ?>
-                                    <a href="update_round_status.php?id=<?php echo $act['id']; ?>&action=cancel&booking_id=<?php echo $booking_id; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('ยกเลิกรอบนี้?')"><i class="fas fa-trash"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <?php if ($act['status'] == 'pending'): ?>
+                                            <a href="update_round_status.php?id=<?php echo $act['id']; ?>&action=call&booking_id=<?php echo $booking_id; ?>" class="btn btn-success btn-action shadow-sm" title="เรียกคิว"><i class="fas fa-play"></i></a>
+                                        <?php elseif ($act['status'] == 'calling'): ?>
+                                            <a href="update_round_status.php?id=<?php echo $act['id']; ?>&action=finish&booking_id=<?php echo $booking_id; ?>" class="btn btn-primary btn-action shadow-sm" title="จบงาน"><i class="fas fa-check"></i></a>
+                                        <?php endif; ?>
+                                        <a href="update_round_status.php?id=<?php echo $act['id']; ?>&action=cancel&booking_id=<?php echo $booking_id; ?>" class="btn btn-outline-danger btn-action" onclick="return confirm('ยกเลิกรอบนี้?')" title="ลบ"><i class="fas fa-trash-can"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card p-4 text-center sticky-top" style="top: 100px;">
-                <h5 class="fw-bold mb-1">QR Code</h5>
-                <p class="small text-muted mb-4">ให้ลูกค้าสแกนเพื่อจองคิวรอบกิจกรรม</p>
-                <div id="qrcode" class="d-flex justify-content-center mb-4"></div>
-                <button onclick="window.print()" class="btn btn-dark w-100 py-3 rounded-4 fw-bold">
-                    <i class="fas fa-print me-2"></i>พิมพ์ป้ายหน้าร้าน
-                </button>
+            <div class="card p-4 text-center qr-card shadow-lg">
+                <div class="qr-print-area">
+                    <div class="mb-4">
+                        <span class="badge bg-su-green px-3 py-2 rounded-pill mb-3">SCAN TO BOOK</span>
+                        <h3 class="fw-bold text-dark mb-1"><?php echo htmlspecialchars($booking['shop_name']); ?></h3>
+                        <p class="text-muted small mb-0"><?php echo htmlspecialchars($booking['event_name']); ?></p>
+                    </div>
+
+                    <div id="qrcode" class="d-flex justify-content-center mb-4 p-4 bg-white rounded-4 shadow-sm border"></div>
+                    
+                    <div class="mb-2">
+                        <p class="fw-bold text-su-green mb-0">ระบบจองคิวกิจกรรมออนไลน์</p>
+                        <small class="text-muted opacity-50">Booth ID: #<?php echo $booking_id; ?></small>
+                    </div>
+                </div>
+
+                <div class="no-print mt-4 border-top pt-4">
+                    <button onclick="window.print()" class="btn btn-dark w-100 py-3 rounded-4 fw-bold mb-3 shadow">
+                        <i class="fas fa-print me-2"></i>พิมพ์ป้ายหน้าร้าน
+                    </button>
+                    <a href="booth_stats.php?id=<?php echo $booking_id; ?>" class="btn btn-outline-primary w-100 py-3 rounded-4 fw-bold">
+                        <i class="fas fa-chart-line me-2"></i>ดูสถิติบูธ
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // สร้าง QR Code ด้วยสไตล์ที่คมชัดขึ้น
     new QRCode(document.getElementById("qrcode"), { 
         text: "<?php echo $qr_data; ?>", 
-        width: 180, height: 180,
-        colorDark : "#2d6358",
+        width: 220,
+        height: 220,
+        colorDark : "#1e293b",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
     });
 </script>
+
 </body>
 </html>

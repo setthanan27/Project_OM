@@ -2,6 +2,11 @@
 session_start();
 include 'config.php';
 
+// จำ ID บูธที่สแกนเข้ามาล่าสุดไว้ใน Session สำหรับปุ่มย้อนกลับ
+if (isset($_GET['id'])) {
+    $_SESSION['last_scanned_id'] = $_GET['id'];
+}
+
 $is_logged_in = isset($_SESSION['user_id']);
 $user_id = $_SESSION['user_id'] ?? null;
 $user_name = $_SESSION['user_name'] ?? 'Guest';
@@ -10,6 +15,7 @@ $user_picture = $_SESSION['user_picture'] ?? 'https://cdn-icons-png.flaticon.com
 $booking_id = $_GET['id'] ?? null;
 if (!$booking_id) die("ไม่พบรหัสบูธกิจกรรม");
 
+// ดึงข้อมูลบูธและชื่อร้าน
 $stmt = $conn->prepare("SELECT b.*, o.shop_name FROM event_bookings b JOIN booth_owners o ON b.owner_id = o.id WHERE b.id = ?");
 $stmt->execute([$booking_id]);
 $booth = $stmt->fetch();
@@ -18,6 +24,7 @@ if (!$booth) {
     exit;
 }
 
+// ดึงรอบกิจกรรมและจำนวนคนจอง (รวมถึงข้อความบันทึก completion_note)
 $stmt_times = $conn->prepare("
     SELECT a.*, 
     (SELECT COUNT(*) FROM user_activity_reservations r WHERE r.activity_id = a.id) as current_booked 
@@ -49,57 +56,36 @@ if ($is_logged_in) {
         :root { --su-green: #3a8173; --su-soft: #f0f7f5; }
         body { background-color: #f4f7f6; font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Navbar Responsive */
         .navbar { background: #ffffff !important; border-bottom: 1px solid #eee; padding: 12px 0; }
         .navbar-brand { color: var(--su-green) !important; font-size: 1.1rem; }
-        .profile-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .profile-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
         
-        /* Booth Header */
         .booth-banner { background: white; border-radius: 0 0 30px 30px; padding: 30px 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
         
-        /* Responsive Card Grid */
-        .card-booking { border-radius: 20px; border: none; background: white; transition: 0.3s; padding: 20px; }
+        .card-booking { border-radius: 20px; border: none; background: white; transition: 0.3s; padding: 20px; position: relative; overflow: hidden; }
         .card-booking.booked { border: 2px solid var(--su-green); background-color: var(--su-soft); }
-        .card-booking.full-booked { opacity: 0.7; }
-        
-        /* Typography Responsive */
-        h2 { font-size: 1.5rem; }
+        .card-booking.full-booked { opacity: 0.7; background-color: #f8f9fa; }
+        .card-booking.finished-card { opacity: 0.8; background-color: #eee; grayscale: 1; }
+
         .time-display { font-size: 1.4rem; font-weight: 800; color: #2d3436; }
+        .btn-booking { padding: 12px; border-radius: 15px; font-weight: bold; }
+
+        .note-box { background: #fff9db; border-left: 4px solid #fcc419; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; }
         
-        /* Buttons */
-        .btn-booking { padding: 12px; border-radius: 15px; font-weight: bold; font-size: 1rem; }
-        
-        @media (max-width: 576px) {
-            .booth-banner { padding: 20px 10px; }
-            h2 { font-size: 1.25rem; }
-            .time-display { font-size: 1.2rem; }
-            .card-booking { padding: 15px; }
-        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .animate-pulse { animation: pulse 1.5s infinite; }
     </style>
 </head>
 <body>
 
-
-<nav class="navbar sticky-top mb-0">
+<nav class="navbar sticky-top">
     <div class="container px-3">
-        <a class="navbar-brand fw-bold">EventQ+
-        </a>
+        <a  class="navbar-brand fw-bold">EventQ+</a>
         <div class="d-flex align-items-center">
             <?php if ($is_logged_in): ?>
-                <div class="d-flex align-items-center bg-light rounded-pill p-1 pe-3">
-                    <img src="<?php echo $user_picture; ?>" class="profile-img me-2">
-                    <span class="small fw-bold d-none d-sm-inline me-2"><?php echo htmlspecialchars($user_name); ?></span>
-                    
-                    <div class="vr mx-2 d-none d-sm-block" style="height: 20px;"></div>
-                    
-                    <a href="logout_users.php?back_id=<?php echo $booking_id; ?>" class="text-danger small text-decoration-none fw-bold ms-1">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
-                </div>
+                <img src="<?php echo $user_picture; ?>" class="profile-img shadow-sm">
             <?php else: ?>
-                <a href="google_login_page.php?id=<?php echo $booking_id; ?>" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                    <i class="fab fa-google me-1"></i> Login
-                </a>
+                <a href="google_login_page.php?id=<?php echo $booking_id; ?>" class="btn btn-primary btn-sm rounded-pill px-3">Login</a>
             <?php endif; ?>
         </div>
     </div>
@@ -107,13 +93,10 @@ if ($is_logged_in) {
 
 <div class="booth-banner text-center">
     <div class="container">
-        <h2 class="fw-bold mb-2">บูธ <span class="text-success"><?php echo htmlspecialchars($booth['shop_name']); ?></span></h2>
-        <?php if (!empty($booth['activity_detail'])): ?>
-            <p class="text-muted small mb-3"><?php echo htmlspecialchars($booth['activity_detail']); ?></p>
-        <?php endif; ?>
-        
+        <h2 class="fw-bold mb-2"><?php echo htmlspecialchars($booth['shop_name']); ?></h2>
+        <p class="text-muted small">เลือกเวลาที่คุณสะดวกเพื่อสำรองที่นั่งเข้าร่วมกิจกรรม</p>
         <div class="alert alert-warning py-2 border-0 rounded-4 d-inline-block small mb-0">
-            <i class="fas fa-info-circle me-1"></i> กรุณามารอก่อนเวลา 10 นาที
+            <i class="fas fa-clock me-1"></i> กรุณามารอก่อนเวลารอบกิจกรรม 10 นาที
         </div>
     </div>
 </div>
@@ -124,49 +107,54 @@ if ($is_logged_in) {
             <?php foreach ($activities as $act): 
                 $is_booked = in_array($act['id'], $booked_ids);
                 $is_full = ($act['current_booked'] >= $act['max_slots']);
-                $is_calling = ($act['status'] == 'calling');
+                $status = $act['status']; // pending, calling, finished, cancelled
             ?>
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card card-booking <?php echo $is_booked ? 'booked' : ''; ?> <?php echo ($is_full && !$is_booked) ? 'full-booked' : ''; ?>">
+                <div class="card card-booking <?php echo $is_booked ? 'booked' : ''; ?> <?php echo ($status == 'finished' || $status == 'cancelled') ? 'finished-card' : ''; ?>">
                     
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="small text-muted fw-bold"><i class="far fa-clock me-1"></i> รอบเวลา</span>
-                        <?php if ($is_calling): ?>
-                            <span class="badge bg-warning text-dark rounded-pill animate-pulse">กำลังเรียกคิว</span>
+                        <span class="small text-muted fw-bold">รอบกิจกรรม</span>
+                        <?php if ($status == 'calling'): ?>
+                            <span class="badge bg-warning text-dark rounded-pill animate-pulse">กำลังเรียกคิว!</span>
+                        <?php elseif ($status == 'finished'): ?>
+                            <span class="badge bg-secondary rounded-pill">จบกิจกรรมแล้ว</span>
+                        <?php elseif ($status == 'cancelled'): ?>
+                            <span class="badge bg-danger rounded-pill">ยกเลิก</span>
                         <?php endif; ?>
                     </div>
 
-                    <div class="time-display mb-3">
+                    <div class="time-display mb-2">
                         <?php echo date('H:i', strtotime($act['start_time'])); ?> - <?php echo date('H:i', strtotime($act['end_time'])); ?>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-4 bg-light p-2 rounded-3">
-                        <span class="small text-muted">จำนวนที่จอง</span>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="small text-muted">ผู้เข้าร่วม</span>
                         <span class="fw-bold <?php echo $is_full ? 'text-danger' : 'text-success'; ?>">
                             <?php echo $act['current_booked']; ?>/<?php echo $act['max_slots']; ?>
                         </span>
                     </div>
 
                     <?php if ($is_booked): ?>
-                        <button class="btn btn-success w-100 btn-booking" disabled>
-                            <i class="fas fa-check-circle me-2"></i>จองสำเร็จแล้ว
-                        </button>
+                        <button class="btn btn-success w-100 btn-booking" disabled><i class="fas fa-check-circle me-2"></i>จองสำเร็จแล้ว</button>
+                    <?php elseif ($status == 'finished' || $status == 'cancelled'): ?>
+                        <button class="btn btn-light w-100 btn-booking text-muted" disabled>ไม่สามารถจองได้</button>
                     <?php elseif ($is_full): ?>
-                        <button class="btn btn-light w-100 btn-booking text-muted" disabled>
-                            รอบนี้เต็มแล้ว
-                        </button>
+                        <button class="btn btn-light w-100 btn-booking text-muted" disabled>รอบนี้เต็มแล้ว</button>
                     <?php else: ?>
-                        <button class="btn btn-primary w-100 btn-booking shadow-sm" onclick="doBooking(<?php echo $act['id']; ?>)">
-                            จองรอบนี้
-                        </button>
+                        <button class="btn btn-primary w-100 btn-booking shadow-sm" onclick="doBooking(<?php echo $act['id']; ?>)">จองรอบนี้</button>
+                    <?php endif; ?>
+
+                    <?php if (!empty($act['completion_note'])): ?>
+                        <div class="note-box">
+                            <i class="fas fa-comment-dots me-1 text-warning"></i>
+                            <strong>บันทึกจากบูธ:</strong> <?php echo htmlspecialchars($act['completion_note']); ?>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div class="col-12 text-center py-5">
-                <h6 class="text-muted">ยังไม่มีกิจกรรมที่เปิดจองในขณะนี้</h6>
-            </div>
+            <div class="col-12 text-center py-5"><h6 class="text-muted">ยังไม่มีกิจกรรมที่เปิดจองในขณะนี้</h6></div>
         <?php endif; ?>
     </div>
 
@@ -178,16 +166,18 @@ if ($is_logged_in) {
 </div>
 
 <script>
+// รีเฟรชหน้าเว็บทุก 30 วินาทีเพื่ออัปเดตสถานะเรียกคิว
+setTimeout(function(){ location.reload(); }, 30000);
+
 function doBooking(id) {
     if (!<?php echo $is_logged_in ? 'true' : 'false'; ?>) {
         Swal.fire({
             title: 'กรุณาล็อกอิน',
-            text: 'เข้าสู่ระบบด้วย Google เพื่อจองกิจกรรม',
+            text: 'เข้าสู่ระบบเพื่อดำเนินการจองกิจกรรม',
             icon: 'info',
-            confirmButtonText: 'ล็อกอินเลย',
+            confirmButtonText: 'Login with Google',
             confirmButtonColor: '#3a8173',
-            showCancelButton: true,
-            cancelButtonText: 'ยกเลิก'
+            showCancelButton: true
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = 'google_login_page.php?id=<?php echo $booking_id; ?>';
@@ -200,16 +190,27 @@ function doBooking(id) {
         title: 'ยืนยันการจอง?',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'จองรอบนี้',
+        confirmButtonText: 'ยืนยัน',
         cancelButtonText: 'ปิด',
         confirmButtonColor: '#3a8173'
     }).then((result) => {
         if (result.isConfirmed) {
+            // ส่งไปเช็คเวลาซ้อนและบันทึกที่ไฟล์ save_reservation.php
             window.location.href = 'save_reservation.php?activity_id=' + id + '&booking_id=<?php echo $booking_id; ?>';
         }
     });
 }
-</script>
 
+// ตรวจสอบสถานะหลังการจอง (จาก URL Parameter)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('error') === 'collision') {
+    Swal.fire({
+        title: 'เวลาทับซ้อน!',
+        text: 'คุณมีการจองกิจกรรมอื่นในช่วงเวลานี้อยู่แล้ว กรุณาตรวจสอบประวัติการจอง',
+        icon: 'error',
+        confirmButtonColor: '#3a8173'
+    });
+}
+</script>
 </body>
 </html>
