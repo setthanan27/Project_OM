@@ -66,7 +66,7 @@ if (!$booking) { die("ไม่พบข้อมูลการจอง"); }
 
 <div class="receipt-paper">
     <div class="header-logo">
-        SU WEB PORTAL - EVENT BOOKING SYSTEM
+        EventQ+ - EVENT BOOKING SYSTEM
     </div>
 
     <?php if($booking['booking_status'] == 'confirmed'): ?>
