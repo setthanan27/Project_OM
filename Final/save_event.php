@@ -1,56 +1,56 @@
 <?php
+session_start();
 include 'config.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    try {
-        // เริ่มต้น Transaction เพื่อความปลอดภัยของข้อมูล
-        $conn->beginTransaction();
+// ตรวจสอบสิทธิ์ Admin
+if (!isset($_SESSION['admin_id'])) {
+    header("Location: login.php");
+    exit;
+}
 
-        // 1. บันทึกข้อมูลลงตาราง events
-        $sql_event = "INSERT INTO events (event_name, event_date, location) VALUES (?, ?, ?)";
-        $stmt_event = $conn->prepare($sql_event);
-        $stmt_event->execute([
-            $_POST['event_name'],
-            $_POST['event_date'],
-            $_POST['location']
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // รับค่าจากฟอร์ม
+    $event_name = $_POST['event_name'];
+    $event_date = $_POST['event_date'];
+    $location = $_POST['location'];
+    
+    // ข้อมูลเพิ่มเติม (ถ้าไม่กรอกจะให้เป็นค่าว่าง)
+    $event_detail = $_POST['event_detail'] ?? '';
+    $contact_phone = $_POST['contact_phone'] ?? '';
+    $instructions = $_POST['instructions'] ?? '';
+    $facilities = $_POST['facilities'] ?? '';
+
+    try {
+        // เตรียม SQL Statement
+        $sql = "INSERT INTO events (event_name, event_date, location, event_detail, contact_phone, instructions, facilities) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        
+        // ประมวลผลการบันทึก
+        $result = $stmt->execute([
+            $event_name, 
+            $event_date, 
+            $location, 
+            $event_detail, 
+            $contact_phone, 
+            $instructions, 
+            $facilities
         ]);
 
-        // ดึง ID ของงานที่เพิ่งสร้างล่าสุด
-        $event_id = $conn->lastInsertId();
-
-        // 2. บันทึกข้อมูลประเภทบูธ (เนื่องจากส่งมาเป็น Array)
-        $booth_types = $_POST['booth_type'];
-        $booth_prices = $_POST['booth_price'];
-        $booth_qtys = $_POST['booth_qty'];
-
-        $sql_booth = "INSERT INTO booth_types (event_id, type_name, price, total_slots) VALUES (?, ?, ?, ?)";
-        $stmt_booth = $conn->prepare($sql_booth);
-
-        foreach ($booth_types as $index => $type_name) {
-            // ป้องกันค่าว่าง
-            if (!empty($type_name)) {
-                $stmt_booth->execute([
-                    $event_id,
-                    $type_name,
-                    $booth_prices[$index],
-                    $booth_qtys[$index]
-                ]);
-            }
+        if ($result) {
+            header("Location: admin_panel.php?status=success");
+        } else {
+            header("Location: admin_panel.php?status=error");
         }
+        exit;
 
-        // ยืนยันการบันทึกข้อมูลทั้งหมด
-        $conn->commit();
-
-        // เมื่อสำเร็จ ให้เด้งกลับไปหน้า Admin Panel พร้อมแจ้งเตือน
-        echo "<script>
-                alert('สร้างงานอีเวนท์เรียบร้อยแล้ว!');
-                window.location.href = 'admin_panel.php';
-              </script>";
-
-    } catch (Exception $e) {
-        // หากเกิดข้อผิดพลาด ให้ยกเลิกสิ่งที่ทำค้างไว้ (Rollback)
-        $conn->rollBack();
-        echo "เกิดข้อผิดพลาด: " . $e->getMessage();
+    } catch (PDOException $e) {
+        // กรณีเกิดข้อผิดพลาด เช่น คอลัมน์ยังไม่ได้เพิ่มใน DB
+        die("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " . $e->getMessage());
     }
+} else {
+    header("Location: admin_panel.php");
+    exit;
 }
 ?>

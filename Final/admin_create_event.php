@@ -1,5 +1,6 @@
 <?php
 session_start();
+// ตรวจสอบสิทธิ์ Admin
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
     exit;
@@ -45,11 +46,9 @@ include 'config.php';
             <small class="d-block opacity-75">ผู้ดูแลระบบ</small>
             <span class="fw-bold"><?php echo $_SESSION['admin_name']; ?></span>
         </div>
-        
         <div class="rounded-circle bg-white text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
             <?php echo mb_substr($_SESSION['admin_name'], 0, 1, 'UTF-8'); ?>
         </div>
-
         <a href="logout.php" class="btn btn-link text-white ms-3 p-0" title="ออกจากระบบ" onclick="return confirm('คุณต้องการออกจากระบบใช่หรือไม่?')">
             <i class="fas fa-sign-out-alt fs-5"></i>
         </a>
@@ -63,7 +62,6 @@ include 'config.php';
         <li onclick="location.href='admin_bookings.php'"><i class="fas fa-clipboard-list"></i> รายการจองทั้งหมด</li>
         <li onclick="location.href='admin_users.php'"><i class="fas fa-users-cog"></i> จัดการสมาชิก</li>
         <li onclick="location.href='admin_stats.php'"><i class="fas fa-chart-pie"></i> รายงานสถิติ</li>
-    
     </ul>
 </div>
 
@@ -73,22 +71,38 @@ include 'config.php';
             <form action="save_event.php" method="POST">
                 <div class="section-title h5">ข้อมูลอีเวนท์</div>
                 <div class="row mb-4">
-                    <div class="col-md-8 mb-3">
+                    <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">ชื่ออีเวนท์</label>
-                        <input type="text" name="event_name" class="form-control form-control-lg" required>
+                        <input type="text" name="event_name" class="form-control" placeholder="เช่น SU Open House 2026" required>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">วันที่</label>
-                        <input type="date" name="event_date" class="form-control form-control-lg" required>
+                        <input type="date" name="event_date" class="form-control" required>
                     </div>
-                    <div class="col-md-8 mb-3">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">เบอร์โทรติดต่อ</label>
+                        <input type="text" name="contact_phone" class="form-control" placeholder="08x-xxx-xxxx">
+                    </div>
+                    <div class="col-md-12 mb-3">
                         <label class="form-label fw-bold">สถานที่</label>
-                        <input type="text" name="location" class="form-control" required>
+                        <input type="text" name="location" class="form-control" placeholder="ระบุอาคารหรือพิกัดจัดงาน" required>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label fw-bold">รายละเอียดอีเวนท์</label>
+                        <textarea name="event_detail" class="form-control" rows="3" placeholder="ภาพรวมของงานกิจกรรม..."></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-primary">คำแนะนำสำหรับผู้เข้าร่วม</label>
+                        <textarea name="instructions" class="form-control" rows="2" placeholder="ข้อควรปฏิบัติ, การเตรียมตัว..."></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-primary">สิ่งอำนวยความสะดวก</label>
+                        <textarea name="facilities" class="form-control" rows="2" placeholder="ที่จอดรถ, WIFI, จุดบริการน้ำ..."></textarea>
                     </div>
                 </div>
 
                 <div class="section-title h5 d-flex justify-content-between align-items-center">
-                    การตั้งค่าบูธ
+                    การตั้งค่าประเภทบูธ
                     <button type="button" id="add-booth" class="btn btn-sm btn-outline-success">+ เพิ่มประเภทบูธ</button>
                 </div>
 
@@ -115,7 +129,7 @@ include 'config.php';
                 </div>
 
                 <div class="text-center mt-5">
-                    <button type="button" onclick="history.back()" class="btn btn-save shadow">กลับ</button>
+                    <button type="button" onclick="history.back()" class="btn btn-save shadow me-2" style="background: #6c757d;">กลับ</button>
                     <button type="submit" class="btn btn-save shadow">ยืนยันการสร้างงาน</button>
                 </div>
             </form>
@@ -124,12 +138,15 @@ include 'config.php';
 </div>
 
 <script>
+    // สคริปต์เพิ่มแถวประเภทบูธใหม่
     document.getElementById('add-booth').addEventListener('click', function() {
         const container = document.getElementById('booth-container');
         const newItem = document.querySelector('.booth-item').cloneNode(true);
         newItem.querySelectorAll('input').forEach(input => input.value = input.defaultValue);
         container.appendChild(newItem);
     });
+
+    // สคริปต์ลบแถวประเภทบูธ
     document.addEventListener('click', function(e) {
         if (e.target.closest('.remove-booth')) {
             const items = document.querySelectorAll('.booth-item');
