@@ -81,7 +81,7 @@ include 'config.php';
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">เบอร์โทรติดต่อ</label>
-                        <input type="text" name="contact_phone" class="form-control" placeholder="08x-xxx-xxxx">
+                        <input type="number" name="contact_phone" class="form-control" placeholder="08x-xxx-xxxx">
                     </div>
                     <div class="col-md-12 mb-3">
                         <label class="form-label fw-bold">สถานที่</label>
@@ -92,11 +92,11 @@ include 'config.php';
                         <textarea name="event_detail" class="form-control" rows="3" placeholder="ภาพรวมของงานกิจกรรม..."></textarea>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-primary">คำแนะนำสำหรับผู้เข้าร่วม</label>
+                        <label class="form-label fw-bold ">คำแนะนำสำหรับผู้เข้าร่วม</label>
                         <textarea name="instructions" class="form-control" rows="2" placeholder="ข้อควรปฏิบัติ, การเตรียมตัว..."></textarea>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-primary">สิ่งอำนวยความสะดวก</label>
+                        <label class="form-label fw-bold">สิ่งอำนวยความสะดวก</label>
                         <textarea name="facilities" class="form-control" rows="2" placeholder="ที่จอดรถ, WIFI, จุดบริการน้ำ..."></textarea>
                     </div>
                 </div>
@@ -111,7 +111,7 @@ include 'config.php';
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold">ประเภทบูธ</label>
-                                <input type="text" name="booth_type[]" class="form-control" placeholder="เช่น อาหาร" required>
+                                <input type="text" name="booth_type[]" class="form-control" placeholder="เช่น โซน A" required>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">ราคา (฿)</label>

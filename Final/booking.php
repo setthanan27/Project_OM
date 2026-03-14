@@ -59,7 +59,7 @@ $booth_types = $stmt_booths->fetchAll();
         <div class="col-lg-9">
             <h2 class="fw-bold mb-4 text-dark"><i class="fas fa-store-alt me-2 text-success"></i>จองบูธ: <?php echo htmlspecialchars($event['event_name']); ?></h2>
             
-            <form action="confirm_booking.php" method="POST" enctype="multipart/form-data">
+            <form action="confirm_booking.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
                 <input type="hidden" name="event_id" value="<?php echo $event_id; ?>">
                 
                 <h5 class="fw-bold mb-3">1. เลือกประเภทพื้นที่บูธ</h5>
@@ -126,9 +126,20 @@ $booth_types = $stmt_booths->fetchAll();
                     
                     <div class="row align-items-center g-4">
                         <div class="col-md-5 text-center">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=0853184074" alt="PromptPay QR" class="img-fluid rounded-4 mb-2 border p-3 bg-white shadow-sm">
-                            <div class="fw-bold text-su-green mt-2">พร้อมเพย์: 085-xxx-4074</div>
-                            <small class="text-muted">ชื่อบัญชี: มอส (Setthanan)</small>
+                            <img id="pp-qr" src="https://promptpay.io/0853184074.png" alt="PromptPay QR" class="img-fluid rounded-4 mb-2 border p-3 bg-white shadow-sm" style="max-width: 250px;">
+                            
+                            <div class="fw-bold text-su-green mt-2">
+                                <i class="fas fa-mobile-alt me-1"></i> พร้อมเพย์: 085-318-4074
+                            </div>
+                            <div class="small text-muted mb-2">ชื่อบัญชี: นายเสฏฐนันท์ พจมานวิมล (Setthanan)</div>
+                            
+                            <div class="h5 fw-bold text-danger mb-2" id="qr-amount-display" style="display:none;">
+                                ยอดชำระ: ฿<span id="amount-text">0</span>
+                            </div>
+
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">
+                                <i class="fas fa-check-circle me-1"></i> สแกนจ่ายตามยอดอัตโนมัติ
+                            </span>
                         </div>
                         <div class="col-md-7">
                             <div class="bg-light p-3 rounded-4 mb-3">
@@ -155,21 +166,71 @@ $booth_types = $stmt_booths->fetchAll();
 </div>
 
 <script>
+    function validateForm() {
+        // 1. ตรวจสอบ Checkbox (ต้องเลือกอย่างน้อย 1 ประเภท)
+        const checkboxes = document.querySelectorAll('input[name="categories[]"]:checked');
+        if (checkboxes.length === 0) {
+            alert("กรุณาเลือกหมวดหมู่สินค้า/บริการอย่างน้อย 1 ประเภท");
+            return false;
+        }
+
+        // 2. ตรวจสอบการเลือกบูธ (Radio)
+        const selectedBooth = document.querySelector('input[name="type_id"]:checked');
+        if (!selectedBooth) {
+            alert("กรุณาเลือกประเภทพื้นที่บูธ");
+            return false;
+        }
+
+        // 3. ตรวจสอบรายละเอียดกิจกรรม (Textarea)
+        const activityDetail = document.querySelector('textarea[name="activity_detail"]').value.trim();
+        if (activityDetail === "") {
+            alert("กรุณาระบุรายละเอียดกิจกรรมบูธ");
+            return false;
+        }
+
+        // 4. ตรวจสอบการแนบสลิป (เฉพาะกรณีที่บูธมีราคา > 0)
+        const price = parseFloat(selectedBooth.getAttribute('data-price'));
+        const slipInput = document.getElementById('slip_input');
+        if (price > 0 && slipInput.files.length === 0) {
+            alert("กรุณาแนบรูปสลิปหลักฐานการโอนเงิน");
+            return false;
+        }
+
+        return true; // ถ้าครบทุกอย่างให้ส่งฟอร์มได้
+    }
+
+    // โค้ดเดิมของมอส (คงไว้ห้ามลบ)
     const radios = document.querySelectorAll('.booth-radio');
     const paymentSection = document.getElementById('payment-section');
     const slipInput = document.getElementById('slip_input');
+    
+    // ส่วนที่เพิ่มใหม่สำหรับ QR Dynamic
+    const ppQrImg = document.getElementById('pp-qr');
+    const amountDisplay = document.getElementById('qr-amount-display');
+    const amountText = document.getElementById('amount-text');
 
     radios.forEach(radio => {
         radio.addEventListener('change', function() {
             const price = parseFloat(this.getAttribute('data-price'));
+            
             if (price > 0) {
+                // 1. แสดงส่วนชำระเงิน
                 paymentSection.style.display = 'block';
                 slipInput.required = true;
-                // เลื่อนหน้าจอลงมาที่ส่วนชำระเงิน
+                
+                // 2. อัปเดต QR Code ตามยอดเงิน (ใช้โครงสร้าง https://promptpay.io/เบอร์/ยอดเงิน.png)
+                ppQrImg.src = `https://promptpay.io/0853184074/${price}.png`;
+                
+                // 3. อัปเดตตัวเลขแสดงผลบนหน้าจอ
+                amountDisplay.style.display = 'block';
+                amountText.innerText = price.toLocaleString();
+
+                // เลื่อนหน้าจอลงมา
                 paymentSection.scrollIntoView({ behavior: 'smooth' });
             } else {
                 paymentSection.style.display = 'none';
                 slipInput.required = false;
+                amountDisplay.style.display = 'none';
             }
         });
     });

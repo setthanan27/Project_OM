@@ -1,6 +1,8 @@
 <?php
 session_start();
 include 'config.php';
+date_default_timezone_set("Asia/Bangkok"); // ตั้งเวลาให้ตรงเพื่อเช็ควันที่ปัจจุบัน
+$today = date('Y-m-d');
 
 // ตรวจสอบสถานะการกรองจาก URL (หน้าหลัก หรือ บูธของฉัน)
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
@@ -14,13 +16,13 @@ if (isset($_SESSION['owner_id'])) {
     $stmt_events = $conn->query("SELECT * FROM events ORDER BY event_date ASC");
     $events = $stmt_events->fetchAll();
 
-    // 2. ดึงข้อมูลการจองที่ "ยืนยันแล้ว" สำหรับเมนู 'บูธของฉัน'
-    $sql_confirmed = "SELECT b.*, e.event_name, t.type_name 
-                      FROM event_bookings b
-                      LEFT JOIN events e ON b.event_id = e.id
-                      LEFT JOIN booth_types t ON b.type_id = t.id
-                      WHERE b.owner_id = ? AND b.booking_status = 'confirmed'
-                      ORDER BY b.id DESC";
+    // 2. ดึงข้อมูลการจองที่ "ยืนยันแล้ว" (เพิ่ม e.event_date)
+    $sql_confirmed = "SELECT b.*, e.event_name, e.event_date, t.type_name 
+                    FROM event_bookings b
+                    LEFT JOIN events e ON b.event_id = e.id
+                    LEFT JOIN booth_types t ON b.type_id = t.id
+                    WHERE b.owner_id = ? AND b.booking_status = 'confirmed'
+                    ORDER BY b.id DESC";
     $stmt_conf = $conn->prepare($sql_confirmed);
     $stmt_conf->execute([$owner_id]);
     $confirmed_bookings = $stmt_conf->fetchAll();
@@ -47,16 +49,74 @@ if (isset($_SESSION['owner_id'])) {
         .btn-su:hover { background: var(--su-dark); color: white; }
         .btn-info-event { border-radius: 10px; font-weight: bold; font-size: 0.85rem; border: 2px solid #eee; background: white; }
         .status-table { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+         /* สไตล์สำหรับหน้ายังไม่ Login */
+       .hero-section { background: var(--su-green); color: white; padding: 100px 0; border-bottom: 5px solid var(--su-dark); position: relative; }
+        .auth-card { 
+            border: none; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            transition: 0.3s; 
+            background: white;
+        }
+        .auth-card:hover { transform: translateY(-10px); }
     </style>
 </head>
 <body>
 
-<?php if (isset($_SESSION['owner_id'])): ?>
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
+<?php if (!isset($_SESSION['owner_id'])): ?>
+    <div class="hero-section text-center">
+        <div class="container">
+            <div class="mb-4">
+                <i class="fas fa-store-alt fa-5x"></i>
+            </div>
+            <h1 class="fw-bold display-5">ระบบจองบูธสำหรับร้านค้า</h1>
+            <p class="lead opacity-75">EventQ+ - ศูนย์รวมงานอีเวนท์และพื้นที่จัดแสดงสินค้า</p>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top: -80px; position: relative; z-index: 10;">
+        <div class="row justify-content-center g-4">
+            <div class="col-md-5 col-lg-4">
+                <div class="card auth-card p-4 text-center h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="text-primary mb-3"><i class="fas fa-user-lock fa-3x"></i></div>
+                        <h4 class="fw-bold">เข้าสู่ระบบ</h4>
+                        <p class="text-muted small">มีบัญชีที่ผ่านการอนุมัติแล้ว? เข้าสู่ระบบเพื่อเริ่มจองบูธได้เลย</p>
+                        <div class="mt-auto">
+                            <hr class="my-4 opacity-25">
+                            <a href="user_login.php" class="btn btn-su w-100 py-3 shadow-sm">เข้าสู่ระบบ (Login)</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5 col-lg-4">
+                <div class="card auth-card p-4 text-center h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="text-success mb-3"><i class="fas fa-id-card fa-3x"></i></div>
+                        <h4 class="fw-bold">สมัครสมาชิกใหม่</h4>
+                        <p class="text-muted small">ลงทะเบียนข้อมูลร้านค้าของคุณ เพื่อขอสิทธิ์เข้าใช้งานระบบจองบูธ</p>
+                        <div class="mt-auto">
+                            <hr class="my-4 opacity-25">
+                            <a href="register.php" class="btn btn-outline-success border-2 w-100 py-3 fw-bold" style="border-radius: 10px;">สมัครสมาชิก (Register)</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-5 text-muted small pb-5">
+            <p>© 2026 EventQ+ Management System. All rights reserved.</p>
+        </div>
+    </div>
+
+<?php else: ?>
+     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top">
         <div class="container">
             <a class="navbar-brand fw-bold" href="index.php">
                 <i class="fas fa-layer-group me-2"></i>Booth Booking System
             </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <div class="collapse navbar-collapse" id="userNavbar">
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item"><a class="nav-link <?php echo $filter == 'all' ? 'active' : ''; ?>" href="index.php">หน้าหลัก</a></li>
@@ -64,8 +124,13 @@ if (isset($_SESSION['owner_id'])) {
                     <li class="nav-item"><a class="nav-link" href="my_bookings.php">ประวัติการจอง</a></li>
                     <li class="nav-item ms-lg-4 border-start ps-lg-4 text-white">
                         <div class="d-flex align-items-center">
-                            <span class="fw-bold me-3 small"><?php echo htmlspecialchars($_SESSION['shop_name']); ?></span>
-                            <a href="logout_user.php" class="btn btn-sm btn-outline-light rounded-pill"><i class="fas fa-sign-out-alt"></i></a>
+                            <div class="text-end me-3">
+                                <small class="d-block opacity-75">ร้านค้า</small>
+                                <span class="fw-bold"><?php echo $_SESSION['shop_name']; ?></span>
+                            </div>
+                            <a href="logout_user.php" class="btn btn-sm btn-outline-light rounded-pill" onclick="return confirm('ยืนยันการออกจากระบบ?')">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </a>
                         </div>
                     </li>
                 </ul>
@@ -82,16 +147,56 @@ if (isset($_SESSION['owner_id'])) {
                         <tr><th class="ps-4">งานอีเวนท์</th><th>ประเภทบูธ</th><th>สถานะกิจกรรม</th><th class="text-center">การจัดการ</th></tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($confirmed_bookings as $b): ?>
-                        <tr>
-                            <td class="ps-4 fw-bold"><?php echo htmlspecialchars($b['event_name']); ?></td>
-                            <td><?php echo htmlspecialchars($b['type_name']); ?></td>
-                            <td><?php echo $b['has_activity'] == 'yes' ? '<span class="badge bg-primary">จัดกิจกรรม</span>' : '<span class="badge bg-secondary">ไม่มีกิจกรรม</span>'; ?></td>
-                            <td class="text-center">
-                                <?php if($b['has_activity'] == 'yes'): ?>
-                                    <a href="manage_activity.php?id=<?php echo $b['id']; ?>" class="btn btn-sm btn-dark px-3 rounded-pill"><i class="fas fa-qrcode me-1"></i> จัดการคิว</a>
-                                <?php endif; ?>
-                            </td>
+    <?php foreach ($confirmed_bookings as $b): ?>
+    <tr>
+        <td class="ps-4">
+            <div class="fw-bold text-dark"><?php echo htmlspecialchars($b['event_name']); ?></div>
+            
+            <div class="d-flex flex-column gap-1 mt-1">
+                <small class="text-primary">
+                    <i class="far fa-calendar-alt me-1"></i>
+                    วันที่จัดงาน: <?php echo date('d/m/Y', strtotime($b['event_date'])); ?>
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-tags me-1"></i>
+                    ประเภท: <?php echo htmlspecialchars($b['category_list'] ?? 'ยังไม่ระบุประเภท'); ?>
+                </small>
+            </div>
+        </td>
+        <td>
+            <span class="badge bg-light text-dark border"><?php echo htmlspecialchars($b['type_name']); ?></span>
+        </td>
+        <td>
+            <?php if($b['has_activity'] == 'yes'): ?>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                    <i class="fas fa-running me-1"></i> จัดกิจกรรม
+                </span>
+            <?php else: ?>
+                <span class="badge bg-light text-muted border">ไม่มีกิจกรรม</span>
+            <?php endif; ?>
+        </td>
+                                <td class="text-center">
+                                    <?php if($b['has_activity'] === NULL): ?>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="update_activity.php?id=<?php echo $b['id']; ?>&has=yes" class="btn btn-primary">มี</a>
+                                            <a href="update_activity.php?id=<?php echo $b['id']; ?>&has=no" class="btn btn-outline-secondary">ไม่มี</a>
+                                        </div>
+                                    <?php elseif($b['has_activity'] == 'yes'): ?>
+                                        <div class="btn-group">
+                                        <?php if($b['has_activity'] == 'yes'): ?>
+                                            <a href="manage_activity.php?id=<?php echo $b['id']; ?>" class="btn btn-sm btn-dark px-3 rounded-start-pill">
+                                                <i class="fas fa-qrcode me-1"></i> จัดการคิว
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="booth_stats.php?id=<?php echo $b['id']; ?>" class="btn btn-sm btn-outline-primary px-3 rounded-end-pill">
+                                            <i class="fas fa-chart-bar me-1"></i> สถิติ
+                                        </a>
+                                    </div>
+                                    <?php else: ?>
+                                        <span class="text-muted small">เสร็จสิ้น</span>
+                                    <?php endif; ?>
+
+                                </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -100,20 +205,25 @@ if (isset($_SESSION['owner_id'])) {
         <?php else: ?>
             <h3 class="fw-bold mb-4">งานอีเวนท์ที่เปิดให้จอง</h3>
             <div class="row g-4">
-                <?php foreach ($events as $event): ?>
+                <?php foreach ($events as $event): 
+                    // เช็คว่างานเริ่มหรือผ่านไปหรือยัง
+                    $is_expired = ($today >= $event['event_date']); 
+                ?>
                 <div class="col-md-4">
                     <div class="card event-card h-100 border-0">
                         <div class="card-body p-4 text-center d-flex flex-column">
                             <div class="mb-3">
                                 <div class="bg-light d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 70px; height: 70px;">
-                                    <i class="fas fa-calendar-alt fa-2x text-success"></i>
+                                    <i class="fas fa-calendar-alt fa-2x <?php echo $is_expired ? 'text-secondary' : 'text-success'; ?>"></i>
                                 </div>
                             </div>
                             <h4 class="fw-bold text-dark mb-3"><?php echo htmlspecialchars($event['event_name']); ?></h4>
+                            
                             <div class="mb-4 small text-muted text-start">
                                 <p class="mb-1"><i class="fas fa-clock me-2 text-primary"></i><?php echo date('d M Y', strtotime($event['event_date'])); ?></p>
                                 <p class="mb-0"><i class="fas fa-map-marker-alt text-danger me-2"></i><?php echo htmlspecialchars($event['location']); ?></p>
                             </div>
+
                             <div class="row g-2 mt-auto">
                                 <div class="col-12">
                                     <button class="btn btn-info-event w-100 py-2" data-bs-toggle="modal" data-bs-target="#eventModal<?php echo $event['id']; ?>">
@@ -121,7 +231,13 @@ if (isset($_SESSION['owner_id'])) {
                                     </button>
                                 </div>
                                 <div class="col-12">
-                                    <a href="booking.php?event_id=<?php echo $event['id']; ?>" class="btn btn-su w-100 py-2">จองพื้นที่บูธ</a>
+                                    <?php if ($is_expired): ?>
+                                        <button class="btn btn-secondary w-100 py-2 fw-bold" disabled style="opacity: 0.7;">
+                                            <i class="fas fa-lock me-1"></i> ปิดรับการจองแล้ว
+                                        </button>
+                                    <?php else: ?>
+                                        <a href="booking.php?event_id=<?php echo $event['id']; ?>" class="btn btn-su w-100 py-2">จองพื้นที่บูธ</a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -185,7 +301,15 @@ if (isset($_SESSION['owner_id'])) {
                                 </div>
                             </div>
                             <div class="modal-footer border-0 p-4 pt-0">
-                                <a href="booking.php?event_id=<?php echo $event['id']; ?>" class="btn btn-su w-100 py-3 shadow">จองพื้นที่งานนี้เลย</a>
+                                <?php if ($is_expired): ?>
+                                    <button class="btn btn-secondary w-100 py-3 shadow-sm fw-bold" disabled>
+                                        <i class="fas fa-lock me-2"></i> ปิดรับการจองสำหรับงานนี้
+                                    </button>
+                                <?php else: ?>
+                                    <a href="booking.php?event_id=<?php echo $event['id']; ?>" class="btn btn-su w-100 py-3 shadow fw-bold">
+                                        <i class="fas fa-check-circle me-2"></i> จองพื้นที่งานนี้เลย
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

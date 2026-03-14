@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set("Asia/Bangkok"); // เพิ่มบรรทัดนี้ครับ
 include 'config.php';
 
 // 1. ตรวจสอบสิทธิ์เจ้าของบูธ
@@ -89,9 +90,7 @@ $fill_rate = ($grand_total_capacity > 0) ? round(($grand_total_participants / $g
                 <p class="text-muted small mb-0"><i class="fas fa-calendar-check me-1"></i> รายงานสถิติกิจกรรมรายวัน</p>
             </div>
         </div>
-        <button onclick="window.print()" class="btn btn-dark rounded-pill px-4 fw-bold">
-            <i class="fas fa-print me-2"></i> พิมพ์รายงาน
-        </button>
+       
     </div>
 </div>
 

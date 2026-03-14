@@ -30,7 +30,8 @@ $my_bookings = $stmt->fetchAll();
 $latest_booth_id = (count($my_bookings) > 0) ? $my_bookings[0]['b_id'] : null;
 $back_link = $latest_booth_id ? "activity_details.php?id=" . $latest_booth_id : "index.php";
 
-// 3. เช็คสถานะการเรียกคิว
+// 3. เช็คสถานะการเรียกคิว (เพิ่มเงื่อนไข && $check['user_res_status'] == 'confirmed')
+// เพื่อให้เสียงดังเฉพาะคนที่เป็น 'ผู้เล่นตัวจริง' ไม่ใช่คนที่ยกเลิกไปแล้ว
 $has_calling = false;
 foreach ($my_bookings as $check) {
     if ($check['round_status'] == 'calling' && $check['user_res_status'] == 'confirmed') {
@@ -76,7 +77,9 @@ foreach ($my_bookings as $check) {
             <i class="fas fa-chevron-left me-2 small"></i>กลับไปหน้าบูธ
         </a>
         <div class="d-flex align-items-center">
-            <a href="logout_users.php" class="text-danger small text-decoration-none fw-bold bg-light rounded-pill px-3 py-1">
+            <a href="logout_users.php?back_to=<?php echo $latest_booth_id; ?>" 
+            class="text-danger small text-decoration-none fw-bold bg-light rounded-pill px-3 py-1"
+            onclick="return confirm('ยืนยันการออกจากระบบ?')">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
@@ -169,9 +172,18 @@ foreach ($my_bookings as $check) {
     // 1. ระบบเสียงแจ้งเตือน
     function playAlert() {
         const sound = document.getElementById('notificationSound');
-        if (sound) { sound.play().catch(e => {}); }
+        if (sound) {
+            // เล่นเสียง และจัดการ Error กรณี Browser บล็อค (ต้องมีการคลิกหน้าจอก่อนครั้งหนึ่ง)
+            sound.play().catch(error => {
+                console.log("Autoplay prevented. Please interact with the page first.");
+            });
+        }
     }
-    <?php if ($has_calling): ?> setTimeout(playAlert, 1000); <?php endif; ?>
+    
+    // ตรวจสอบสถานะการเรียกคิวจริงๆ ก่อนเล่นเสียง
+    <?php if ($has_calling): ?> 
+        setTimeout(playAlert, 1500); 
+    <?php endif; ?>
 
     // 2. รีเฟรชหน้าเว็บทุก 15 วินาที
     setTimeout(function(){ window.location.reload(); }, 15000);
