@@ -40,6 +40,7 @@ if ($filter_type && count($bookings) > 0) {
     <title>จัดการรายการจอง | EventQ+</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root { --su-green: #3a8173; --su-dark: #2d6358; --sidebar-width: 260px; }
         body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; }
@@ -150,16 +151,15 @@ if ($filter_type && count($bookings) > 0) {
                             </td>
                             <td class="text-end pe-4">
                                 <?php if($b['booking_status'] == 'pending'): ?>
-                                    <a href="update_booking.php?id=<?php echo $b['id']; ?>&status=confirmed" 
-                                       class="btn btn-sm btn-success px-3 shadow-sm rounded-pill" 
-                                       onclick="return confirm('ยืนยันการชำระเงินและสิทธิ์บูธนี้?')">อนุมัติ</a>
+                                    <button class="btn btn-sm btn-success px-3 shadow-sm rounded-pill" 
+                                            onclick="updateStatus(<?php echo $b['id']; ?>, 'confirmed')">อนุมัติ</button>
                                     
-                                    <a href="update_booking.php?id=<?php echo $b['id']; ?>&status=cancelled" 
-                                       class="btn btn-sm btn-outline-danger px-3 ms-1 rounded-pill" 
-                                       onclick="return confirm('ต้องการยกเลิกการจองนี้ใช่หรือไม่?')">ปฏิเสธ</a>
-                                <?php else: ?>
+                                    <button class="btn btn-sm btn-outline-danger px-3 ms-1 rounded-pill" 
+                                            onclick="updateStatus(<?php echo $b['id']; ?>, 'cancelled')">ปฏิเสธ</button>
+                                    <?php else: ?>
                                     <small class="text-muted"><i class="fas fa-check-circle text-success me-1"></i> เรียบร้อย</small>
                                 <?php endif; ?>
+                                
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -178,5 +178,45 @@ if ($filter_type && count($bookings) > 0) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function updateStatus(bookingId, status) {
+        let title = status === 'confirmed' ? 'ยืนยันการอนุมัติ?' : 'ต้องการปฏิเสธการจอง?';
+        let text = status === 'confirmed' ? 'เมื่ออนุมัติแล้ว ร้านค้าจะได้รับสิทธิ์เข้าใช้งานบูธทันที' : 'รายการจองนี้จะถูกยกเลิกและคืนสิทธิ์ที่ว่างให้ระบบ';
+        let icon = status === 'confirmed' ? 'success' : 'warning';
+        let confirmBtnColor = status === 'confirmed' ? '#3a8173' : '#d33';
+
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: icon,
+            showCancelButton: true,
+            confirmButtonColor: confirmBtnColor,
+            cancelButtonColor: '#aaa',
+            confirmButtonText: 'ตกลง',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // ส่งไปที่ไฟล์จัดการสถานะ
+                window.location.href = `update_booking.php?id=${bookingId}&status=${status}`;
+            }
+        });
+    }
+
+    // เช็ค URL Parameter เพื่อโชว์ความสำเร็จหลังจาก Redirect กลับมา
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('msg') === 'success') {
+        Swal.fire({
+            icon: 'success',
+            title: 'ดำเนินการสำเร็จ',
+            showConfirmButton: false,
+            timer: 1500
+        }).then(() => {
+            // --- ส่วนที่เพิ่มใหม่: ล้าง ?msg=success ออกจาก URL โดยไม่ทำให้หน้าเว็บรีโหลด ---
+            const url = new URL(window.location);
+            url.searchParams.delete('msg');
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        });
+    }
+</script>
 </body>
 </html>

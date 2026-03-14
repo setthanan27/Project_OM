@@ -12,7 +12,7 @@ $user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'] ?? 'ผู้ใช้งาน';
 $user_picture = $_SESSION['user_picture'] ?? 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
-// 2. ดึงข้อมูลการจอง (ดึงสถานะรายบุคคลและข้อความบันทึกมาด้วย)
+// 2. ดึงข้อมูลการจอง (แก้ Query ให้แม่นยำขึ้น)
 $sql = "SELECT r.id as res_id, r.status as user_res_status, r.*, b.id as b_id, o.shop_name, e.event_name, 
                a.status as round_status, a.start_time, a.end_time, a.completion_note 
         FROM user_activity_reservations r
@@ -26,12 +26,11 @@ $stmt = $conn->prepare($sql);
 $stmt->execute([$user_id]);
 $my_bookings = $stmt->fetchAll();
 
-// หา ID บูธล่าสุดเพื่อทำปุ่มย้อนกลับ (ใช้จากรายการล่าสุดที่ยังไม่จบ)
-$latest_booth_id = (count($my_bookings) > 0) ? $my_bookings[0]['b_id'] : null;
+// หา ID บูธล่าสุดเพื่อทำปุ่มย้อนกลับ
+$latest_booth_id = (count($my_bookings) > 0) ? $my_bookings[0]['b_id'] : ($_SESSION['last_scanned_id'] ?? null);
 $back_link = $latest_booth_id ? "activity_details.php?id=" . $latest_booth_id : "index.php";
 
-// 3. เช็คสถานะการเรียกคิว (เพิ่มเงื่อนไข && $check['user_res_status'] == 'confirmed')
-// เพื่อให้เสียงดังเฉพาะคนที่เป็น 'ผู้เล่นตัวจริง' ไม่ใช่คนที่ยกเลิกไปแล้ว
+// 3. เช็คสถานะการเรียกคิว
 $has_calling = false;
 foreach ($my_bookings as $check) {
     if ($check['round_status'] == 'calling' && $check['user_res_status'] == 'confirmed') {
@@ -78,8 +77,8 @@ foreach ($my_bookings as $check) {
         </a>
         <div class="d-flex align-items-center">
             <a href="logout_users.php?back_to=<?php echo $latest_booth_id; ?>" 
-            class="text-danger small text-decoration-none fw-bold bg-light rounded-pill px-3 py-1"
-            onclick="return confirm('ยืนยันการออกจากระบบ?')">
+               class="text-danger small text-decoration-none fw-bold bg-light rounded-pill px-3 py-1"
+               onclick="return confirm('ยืนยันการออกจากระบบ?')">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
@@ -173,22 +172,38 @@ foreach ($my_bookings as $check) {
     function playAlert() {
         const sound = document.getElementById('notificationSound');
         if (sound) {
-            // เล่นเสียง และจัดการ Error กรณี Browser บล็อค (ต้องมีการคลิกหน้าจอก่อนครั้งหนึ่ง)
             sound.play().catch(error => {
-                console.log("Autoplay prevented. Please interact with the page first.");
+                console.log("Autoplay prevented. Click anywhere on the page to enable sound.");
             });
         }
     }
     
-    // ตรวจสอบสถานะการเรียกคิวจริงๆ ก่อนเล่นเสียง
-    <?php if ($has_calling): ?> 
-        setTimeout(playAlert, 1500); 
-    <?php endif; ?>
+    let playCount = 0; // ตัวแปรนับรอบการเล่น
 
-    // 2. รีเฟรชหน้าเว็บทุก 15 วินาที
-    setTimeout(function(){ window.location.reload(); }, 15000);
+    function playAlert() {
+        const sound = document.getElementById('notificationSound');
+        if (sound && playCount < 3) { // เช็คว่าเล่นไปครบ 3 รอบหรือยัง
+            sound.play().then(() => {
+                playCount++; // เมื่อเล่นสำเร็จให้นับเพิ่ม 1
+                
+                // เมื่อเสียงจบแต่ละรอบ ให้เช็คเพื่อเล่นรอบต่อไป
+                sound.onended = function() {
+                    if (playCount < 3) {
+                        setTimeout(() => {
+                            sound.play();
+                        }, 500); // เว้นจังหวะ 0.5 วินาทีก่อนเล่นรอบถัดไป
+                    }
+                };
+            }).catch(error => {
+                console.log("Autoplay prevented. Click anywhere to enable sound.");
+            });
+        }
+    }
 
-    // 3. ฟังก์ชันยกเลิก (เปลี่ยนเป็น cancel เพื่อเก็บ Log)
+    // 2. รีเฟรชหน้าเว็บทุก 20 วินาที
+    setTimeout(function(){ window.location.reload(); }, 20000);
+
+    // 3. ฟังก์ชันยกเลิก
     function cancelBooking(id) {
         Swal.fire({
             title: 'ต้องการยกเลิกใช่ไหม?',
@@ -205,13 +220,23 @@ foreach ($my_bookings as $check) {
         });
     }
 
-    // 4. แจ้งเตือนสถานะสำเร็จ
+    // 4. แจ้งเตือนสถานะสำเร็จและล้าง URL
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status');
     if (status) {
         let title = (status === 'success') ? 'จองสำเร็จ!' : 'ดำเนินการสำเร็จ';
-        Swal.fire({ title: title, icon: 'success', confirmButtonColor: '#3a8173', timer: 2000, showConfirmButton: false });
-        window.history.replaceState({}, document.title, window.location.pathname);
+        Swal.fire({ 
+            title: title, 
+            icon: 'success', 
+            confirmButtonColor: '#3a8173', 
+            timer: 2000, 
+            showConfirmButton: false 
+        }).then(() => {
+            // ล้างค่า status ออกจาก URL เพื่อป้องกันการเด้งซ้ำเมื่อ Refresh
+            const url = new URL(window.location);
+            url.searchParams.delete('status');
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        });
     }
 </script>
 </body>

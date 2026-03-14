@@ -1,15 +1,18 @@
 <?php
 session_start();
-if (!isset($_SESSION['admin_id'])) { exit; }
 include 'config.php';
 
-$booking_id = $_GET['id'] ?? null;
-$status = $_GET['status'] ?? null;
+$id = $_GET['id'];
+$status = $_GET['status'];
 
-if ($booking_id && $status) {
-    $stmt = $conn->prepare("UPDATE event_bookings SET booking_status = ? WHERE id = ?");
-    if ($stmt->execute([$status, $booking_id])) {
-        echo "<script>alert('อัปเดตสถานะการจองเรียบร้อย'); window.location.href='admin_bookings.php';</script>";
-    }
+$sql = "UPDATE event_bookings SET booking_status = ? WHERE id = ?";
+$stmt = $conn->prepare($sql);
+
+if ($stmt->execute([$status, $id])) {
+    // ส่งกลับมาหน้าเดิมพร้อมแนบพารามิเตอร์ success เพื่อให้ JS แสดงผล
+    header("Location: admin_bookings.php?msg=success");
+} else {
+    echo "เกิดข้อผิดพลาดในการอัปเดต";
 }
+exit;
 ?>
