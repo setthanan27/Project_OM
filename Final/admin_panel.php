@@ -7,8 +7,11 @@ if (!isset($_SESSION['admin_id'])) {
 include 'config.php';
 ?>
 
+
+
 <?php
-include 'config.php';
+date_default_timezone_set("Asia/Bangkok");
+$today = date('Y-m-d');
 
 // 1. ดึงข้อมูลอีเวนท์ทั้งหมด
 $stmt = $conn->prepare("SELECT * FROM events ORDER BY id DESC");
@@ -68,6 +71,7 @@ $total_slots = $stmt_slots->fetch()['total'] ?? 0;
         
         .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
         .status-active { background: #e8f5e9; color: #2e7d32; }
+        .status-closed { background: #ffebee; color: #c62828; }
     </style>
 </head>
 <body>
@@ -143,27 +147,36 @@ $total_slots = $stmt_slots->fetch()['total'] ?? 0;
 
     <div class="row g-4">
         <?php if ($total_events > 0): ?>
-            <?php foreach ($events as $event): ?>
-                <div class="col-md-4 col-xl-3">
-                    <div class="card event-card shadow-sm p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <span class="card-category">Event Management</span>
-                            <span class="status-pill status-active">เปิดรับจอง</span>
+            <?php foreach ($events as $event): 
+                // เช็คเงื่อนไขวันงาน
+                $is_expired = ($today >= $event['event_date']);
+                    ?>
+                        <div class="col-md-4 col-xl-3">
+                            <div class="card event-card shadow-sm p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <span class="card-category">Event Management</span>
+                                    
+                                    <?php if ($is_expired): ?>
+                                        <span class="status-pill status-closed">ปิดรับจอง</span>
+                                    <?php else: ?>
+                                        <span class="status-pill status-active">เปิดรับจอง</span>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <h5 class="fw-bold text-dark mb-2"><?php echo htmlspecialchars($event['event_name']); ?></h5>
+                                <div class="text-muted small mb-3">
+                                    <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i><?php echo htmlspecialchars($event['location']); ?></p>
+                                    <p class="mb-0"><i class="fas fa-calendar-day me-2"></i><?php echo date('d M Y', strtotime($event['event_date'])); ?></p>
+                                </div>
+                                <hr class="my-3">
+                                <div class="d-grid">
+                                    <a href="booth_management.php?id=<?php echo $event['id']; ?>" class="btn btn-outline-primary border-2 fw-bold btn-sm">
+                                        <i class="fas fa-tasks me-2"></i>จัดการข้อมูลบูธ
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <h5 class="fw-bold text-dark mb-2"><?php echo htmlspecialchars($event['event_name']); ?></h5>
-                        <div class="text-muted small mb-3">
-                            <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i><?php echo htmlspecialchars($event['location']); ?></p>
-                            <p class="mb-0"><i class="fas fa-calendar-day me-2"></i><?php echo date('d M Y', strtotime($event['event_date'])); ?></p>
-                        </div>
-                        <hr class="my-3">
-                        <div class="d-grid">
-                            <a href="booth_management.php?id=<?php echo $event['id']; ?>" class="btn btn-outline-primary border-2 fw-bold btn-sm">
-                                <i class="fas fa-tasks me-2"></i>จัดการข้อมูลบูธ
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+        <?php endforeach; ?>
         <?php else: ?>
             <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm">
                 <img src="https://cdn-icons-png.flaticon.com/512/4076/4076402.png" alt="Empty" style="width: 80px; opacity: 0.5;">

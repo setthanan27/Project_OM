@@ -127,7 +127,7 @@ $occupancy_rate = ($total_slots > 0) ? round(($total_booked / $total_slots) * 10
     <div class="filter-section no-print shadow-sm">
         <form method="GET" action="" class="row align-items-center">
             <div class="col-md-auto mb-2 mb-md-0">
-                <label class="fw-bold text-dark me-2"><i class="fas fa-filter text-su-green me-1"></i> เลือกโครงการ:</label>
+                <label class="fw-bold text-dark me-2"><i class="fas fa-filter text-su-green me-1"></i> เลือกงานอีเวนท์:</label>
             </div>
             <div class="col-md-5 mb-2 mb-md-0">
                 <select name="event_id" class="form-select border-0 bg-light rounded-pill" onchange="this.form.submit()">
